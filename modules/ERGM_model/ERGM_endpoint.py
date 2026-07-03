@@ -72,6 +72,47 @@ def generate(
             status_code=500,
             detail=f"ERGM returned invalid JSON: {result.stdout[:200]}"
         )
+    
+
+
+
+
+def normalize_ergm_output(raw: dict, n: int, edges_coef: float, triangles_coef: float, n_samples: int, seed: Optional[int]) -> dict:
+    # Accept either
+    # {'nodes': [...], 'edges': [...], 'metadata': {...}}
+    # or {"adjacency": ...} / {'edges': ...} depending on what the runner returns
+    if "nodes" in raw and "edges" in raw:
+        nodes = raw["nodes"]
+        edges = raw["edges"]
+    elif "adjacency" in raw:
+        adj = raw["adjacency"]
+        nodes = [{"id": i} for i in range(len(adj))]
+        edges = [
+            {"source": i, "target": j}
+            for i in range(len(adj))
+            for j in range(i + 1, len(adj))
+            if adj[i][j] == 1
+        ]
+    else:
+        raise HTTPException(status_code=500, detail="ERGM output missing nodes/edges data")
+
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "metadata": {
+            "model": "ergm",
+            "n_nodes": len(nodes),
+            "n_edges": len(edges),
+            "directed": False,
+            "parameters": {
+                "n": n,
+                "edges_coef": edges_coef,
+                "triangles_coef": triangles_coef,
+                "n_samples": n_samples,
+                "seed": seed
+            }
+        }
+    }
 
 @app.post("/generate/ergm")
 async def ergm_endpoint(request: ERGMRequest):

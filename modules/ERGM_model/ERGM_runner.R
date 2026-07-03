@@ -1,3 +1,5 @@
+# tutorial followed is at: https://statnet.org/workshop-ergm/ergm_tutorial.html
+
 suppressMessages({
   library(ergm)
   library(network)
@@ -16,7 +18,7 @@ if (!is.na(seed)) set.seed(seed)
 # Build empty base network
 net <- network.initialize(n, directed = FALSE)
 
-# ergm 4 syntax — pass formula and coef directly to simulate
+# ergm; pass formula and coef directly to simulate
 simulated <- simulate(
   net ~ edges + triangles,
   coef    = c(edges_coef, triangles_coef),
