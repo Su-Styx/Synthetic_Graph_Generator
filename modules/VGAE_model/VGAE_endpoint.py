@@ -17,7 +17,7 @@ GENERATE_SCRIPT = BASE_DIR / "vgae_pytorch" / "generate.py"
 
 class VGAERequest(BaseModel):
     checkpoint: str #what checkpoint we want to use
-    n: int = Field(...,ge=2) #node count, greater or equal to 2 
+    n: int = Field(...,ge=2) #node count, greater or equal to 2
     t: float = Field(...,gt=0.0,lt=1.0)#Threshold must be less than 1 and gt 0
     seed: Optional[int] = None
 
