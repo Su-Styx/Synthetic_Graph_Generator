@@ -30,6 +30,66 @@ class ERGMRequest(BaseModel):
             raise ValueError('n_samples must be at least 1')
         return n_samples
 
+FIT_R_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "ERGM_fit_runner.R")
+
+FIT_R_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "ERGM_fit_runner.R")
+
+
+def fit_and_generate_from_file(file_path: str, seed: Optional[int] = None) -> dict:
+    seed_arg = str(seed) if seed is not None else "NA"
+
+    try:
+        result = subprocess.run(
+            ["Rscript", FIT_R_SCRIPT_PATH, file_path, seed_arg],
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(
+            status_code=504,
+            detail="ERGM fitting timed out"
+        )
+
+    if result.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail=f"ERGM fit/generate failed: {result.stderr.strip()}"
+        )
+
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=500,
+            detail=f"ERGM returned invalid JSON: {result.stdout[:200]}"
+        )
+    
+class ERGMFitRequest(BaseModel):
+    file_path: str
+    seed: Optional[int] = None
+
+
+@app.post("/fit-generate/ergm")
+async def ergm_fit_generate_endpoint(request: ERGMFitRequest):
+    if not os.path.exists(request.file_path):
+        raise HTTPException(status_code=400, detail="File path does not exist")
+
+    return fit_and_generate_from_file(
+        file_path=request.file_path,
+        seed=request.seed
+    )
+
+@app.post("/fit-generate/ergm")
+async def ergm_fit_generate_endpoint(request: ERGMFitRequest):
+    if not os.path.exists(request.file_path):
+        raise HTTPException(status_code=400, detail="File path does not exist")
+
+    return fit_and_generate_from_file(
+        file_path=request.file_path,
+        seed=request.seed
+    )
+
 def generate(
     n: int,
     edges_coef: float = -3.0,

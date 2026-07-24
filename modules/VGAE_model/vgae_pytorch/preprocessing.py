@@ -33,7 +33,8 @@ def mask_test_edges(adj):
     adj = adj - sp.dia_matrix((adj.diagonal()[np.newaxis, :], [0]), shape=adj.shape)
     adj.eliminate_zeros()
     # Check that diag is zero:
-    assert np.diag(adj.todense()).sum() == 0
+    # assert np.diag(adj.todense()).sum() == 0
+    assert adj.diagonal().sum() == 0 #much more efficient, prevents memory blowup Su-Styx
 
     adj_triu = sp.triu(adj)
     adj_tuple = sparse_to_tuple(adj_triu)

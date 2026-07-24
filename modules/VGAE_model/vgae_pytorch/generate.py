@@ -19,42 +19,40 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 
 # import model 
-
 def load_model(checkpoint_path):
     from input_data import load_data
     from preprocessing import preprocess_graph, sparse_to_tuple
-    import scipy.sparse as sp
-    import numpy as np
 
-    checkpoint   = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
-    args_dict    = checkpoint['args']
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
 
-    # Patch global args before model import
     import args as repo_args
-    repo_args.input_dim   = args_dict['input_dim']
-    repo_args.hidden1_dim = args_dict['hidden1_dim']
-    repo_args.hidden2_dim = args_dict['hidden2_dim']
+    repo_args.dataset = checkpoint["dataset"]
+    repo_args.input_dim = checkpoint["input_dim"]
+    repo_args.hidden1_dim = checkpoint["hidden1_dim"]
+    repo_args.hidden2_dim = checkpoint["hidden2_dim"]
 
-    # Reload the same data the model was trained on
     adj, features = load_data(repo_args.dataset)
-    adj_norm      = preprocess_graph(adj)
-    adj_norm      = torch.sparse.FloatTensor(
-                        torch.LongTensor(adj_norm[0].T),
-                        torch.FloatTensor(adj_norm[1]),
-                        torch.Size(adj_norm[2]))
+    adj_norm = preprocess_graph(adj)
+    adj_norm = torch.sparse.FloatTensor(
+        torch.LongTensor(adj_norm[0].T),
+        torch.FloatTensor(adj_norm[1]),
+        torch.Size(adj_norm[2])
+    )
 
     features = sparse_to_tuple(features.tocoo())
     features = torch.sparse.FloatTensor(
-                    torch.LongTensor(features[0].T),
-                    torch.FloatTensor(features[1]),
-                    torch.Size(features[2]))
+        torch.LongTensor(features[0].T),
+        torch.FloatTensor(features[1]),
+        torch.Size(features[2])
+    )
 
     from model import VGAE
     model = VGAE(adj_norm)
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
 
     return model, features, checkpoint
+
 def generate_graph(model, adj_norm, features, num_nodes_out, threshold=0.5):
     """
     Encode the training graph, sample from latent space,

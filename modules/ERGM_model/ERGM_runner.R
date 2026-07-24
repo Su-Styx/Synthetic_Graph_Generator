@@ -1,60 +1,100 @@
-# tutorial followed is at: https://statnet.org/workshop-ergm/ergm_tutorial.html
+# suppressMessages({
+#   library(ergm)
+#   library(network)
+#   library(jsonlite)
+# })
 
-suppressMessages({
-  library(ergm)
-  library(network)
-  library(jsonlite)
-})
+# args <- commandArgs(trailingOnly = TRUE)
+# file_path <- args[1]
+# seed_arg  <- args[2]
 
-args <- commandArgs(trailingOnly = TRUE)
-n              <- as.integer(args[1])
-edges_coef     <- as.numeric(args[2])
-triangles_coef <- as.numeric(args[3])
-n_samples      <- as.integer(args[4])
-seed           <- as.integer(args[5])
+# if (!is.na(seed_arg) && seed_arg != "NA") {
+#   set.seed(as.integer(seed_arg))
+# }
 
-if (!is.na(seed)) set.seed(seed)
+# read_edge_file <- function(path) {
+#   lines <- readLines(path, warn = FALSE)
+#   lines <- trimws(lines)
+#   lines <- lines[lines != ""]
+#   lines <- lines[!startsWith(lines, "#")]
 
-# Build empty base network
-net <- network.initialize(n, directed = FALSE)
+#   if (length(lines) == 0) {
+#     stop("Input edge file is empty")
+#   }
 
-# ergm; pass formula and coef directly to simulate
-simulated <- simulate(
-  net ~ edges + triangles,
-  coef    = c(edges_coef, triangles_coef),
-  nsim    = 1,
-  control = control.simulate(
-    MCMC.burnin   = 1000,
-    MCMC.interval = 100
-  )
-)
+#   first_line <- lines[1]
 
-# Convert to edge list
-el <- as.edgelist(simulated)
+#   if (grepl(",", first_line, fixed = TRUE)) {
+#     df <- read.csv(path, header = FALSE, comment.char = "#", stringsAsFactors = FALSE)
+#   } else {
+#     df <- read.table(path, header = FALSE, comment.char = "#", stringsAsFactors = FALSE)
+#   }
 
-if (is.null(el) || nrow(el) == 0) {
-  edges_out <- list()
-} else {
-  edges_out <- lapply(1:nrow(el), function(i) {
-    list(source = el[i, 1] - 1L, target = el[i, 2] - 1L)
-  })
-}
+#   if (ncol(df) < 2) {
+#     stop("Edge file must contain at least two columns")
+#   }
 
-nodes_out <- lapply(0:(n - 1), function(i) list(id = i))
+#   df <- df[, 1:2]
+#   names(df) <- c("source", "target")
+#   df
+# }
 
-output <- list(
-  nodes    = nodes_out,
-  edges    = edges_out,
-  metadata = list(
-    model      = "ergm",
-    n_nodes    = n,
-    n_edges    = length(edges_out),
-    directed   = FALSE,
-    parameters = list(
-      edges_coef     = edges_coef,
-      triangles_coef = triangles_coef
-    )
-  )
-)
+# edges_df <- read_edge_file(file_path)
 
-cat(toJSON(output, auto_unbox = TRUE))
+# all_nodes <- sort(unique(c(edges_df$source, edges_df$target)))
+# node_map <- setNames(seq_along(all_nodes), all_nodes)
+
+# net <- network.initialize(length(all_nodes), directed = FALSE)
+# network.vertex.names(net) <- as.character(all_nodes)
+
+# for (i in seq_len(nrow(edges_df))) {
+#   add.edge(
+#     net,
+#     tail = node_map[[as.character(edges_df$source[i])]],
+#     head = node_map[[as.character(edges_df$target[i])]]
+#   )
+# }
+
+# fit <- ergm(net ~ edges + triangles)
+
+# simulated <- simulate(
+#   fit,
+#   nsim = 1,
+#   control = control.simulate.ergm(
+#     MCMC.burnin = 1000,
+#     MCMC.interval = 100
+#   )
+# )
+
+# el <- as.edgelist(simulated)
+# vertex_names <- network.vertex.names(simulated)
+
+# if (is.null(el) || nrow(el) == 0) {
+#   edges_out <- list()
+# } else {
+#   edges_out <- lapply(seq_len(nrow(el)), function(i) {
+#     list(
+#       source = vertex_names[el[i, 1]],
+#       target = vertex_names[el[i, 2]]
+#     )
+#   })
+# }
+
+# nodes_out <- lapply(vertex_names, function(v) list(id = v))
+
+# output <- list(
+#   nodes = nodes_out,
+#   edges = edges_out,
+#   metadata = list(
+#     model = "ergm",
+#     fitted = TRUE,
+#     source_file = file_path,
+#     observed_n_nodes = network.size(net),
+#     observed_n_edges = network.edgecount(net),
+#     generated_n_nodes = length(nodes_out),
+#     generated_n_edges = length(edges_out),
+#     coefficients = as.list(coef(fit))
+#   )
+# )
+
+# cat(toJSON(output, auto_unbox = TRUE))

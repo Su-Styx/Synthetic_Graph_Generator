@@ -131,15 +131,18 @@ print("End of training!", "test_roc=", "{:.5f}".format(test_roc),
 
 
 # Save and export 
-save_path = 'vgae_checkpoint.pt'
+save_path = "vgae_checkpoint.pt"
 torch.save({
-    'model_state_dict': model.state_dict(),
-    'args': {
-        'input_dim':   args.input_dim,
-        'hidden1_dim': args.hidden1_dim,
-        'hidden2_dim': args.hidden2_dim,
-    },
-    'num_nodes': num_nodes,
+    "model_state_dict": model.state_dict(),
+    "optimizer_state_dict": optimizer.state_dict(),
+    "dataset": args.dataset,
+    "model_name": args.model,
+    "epoch": args.num_epoch,
+    "input_dim": args.input_dim,
+    "hidden1_dim": args.hidden1_dim,
+    "hidden2_dim": args.hidden2_dim,
+    "num_nodes": num_nodes,
+    "num_features": num_features,
 }, save_path)
 
 print(f"Weights saved to {save_path}")

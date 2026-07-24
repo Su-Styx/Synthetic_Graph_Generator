@@ -1,5 +1,6 @@
 ### CONFIGS ###
-dataset = 'cora'
+# dataset = 'cora'
+dataset='disease_features'
 model = 'VGAE'
 # model originated as 'GAE'
 input_dim = 1433 

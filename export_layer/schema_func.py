@@ -9,6 +9,35 @@ from rdflib.namespace import RDF
 # note default output from all models has been parsed as JSON for api endpoint usage 
 # therefore, each function will intake a JSON dictionary structure, then convert
 
+
+# networkx graph to json export 
+# holds metatdata for future processing 
+
+def nx_to_export_graph(G):
+    return {
+        "nodes": [
+            {
+                "id": str(node),
+                **attrs,
+            }
+            for node, attrs in G.nodes(data=True)
+        ],
+        "edges": [
+            {
+                "source": str(u),
+                "target": str(v),
+                **attrs,
+            }
+            for u, v, attrs in G.edges(data=True)
+        ],
+        "metadata": {
+            "num_nodes": G.number_of_nodes(),
+            "num_edges": G.number_of_edges(),
+            "directed": G.is_directed(),
+            **dict(G.graph),
+        },
+    }
+
 def validate_graph(graph: dict): #ensure a valid json graph is passed
     required = ["nodes", "edges", "metadata"]
     for key in required:
@@ -32,16 +61,27 @@ def csv_export(graph: dict, out_path: str):
     nodes_path = out_dir / "nodes.csv"
     edges_path = out_dir / "edges.csv"
 
+    node_fields = []
+    for node in graph["nodes"]:
+        for key in node.keys():
+            if key not in node_fields:
+                node_fields.append(key)
+
+    edge_fields = []
+    for edge in graph["edges"]:
+        for key in edge.keys():
+            if key not in edge_fields:
+                edge_fields.append(key)
+
     with open(nodes_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["id"])
+        writer = csv.DictWriter(f, fieldnames=node_fields)
         writer.writeheader()
         writer.writerows(graph["nodes"])
 
     with open(edges_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["source", "target"])
+        writer = csv.DictWriter(f, fieldnames=edge_fields)
         writer.writeheader()
         writer.writerows(graph["edges"])
-
 
 
 
@@ -69,7 +109,7 @@ def neo4j_export(graph: dict, out_path: str):
     with open(rels_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["source", "target"])
         writer.writeheader()
-        for edge in graph["edges"]:
+        for edge in graph["edges"]: 
             writer.writerow({
                 "source": edge["source"],
                 "target": edge["target"],
