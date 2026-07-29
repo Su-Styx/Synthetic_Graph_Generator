@@ -41,6 +41,35 @@ body {
   }
 }
 
+.background {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+
+  /* the image itself will come from inline style */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.focused-background {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+
+  /* same layout, but blurred */
+  filter: blur(8px);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .card {
   padding: 2em;
 }

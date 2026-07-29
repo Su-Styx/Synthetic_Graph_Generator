@@ -1,0 +1,11 @@
+/* src/pages/RunDetailPage.css */
+.run-page { position: relative; min-height: 100vh; width: 100vw; isolation: isolate; overflow: hidden; font-family: Arial, sans-serif; }
+.run-bg { min-height: 100vh; width: 100vw; background-size: cover; background-position: center; background-repeat: no-repeat; filter: blur(8px); }
+.run-content { position: absolute; inset: 0; overflow-y: auto; z-index: 10; padding: 2.5rem 3rem; display: flex; flex-direction: column; gap: var(--space-lg); }
+.run-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-md); }
+.run-eyebrow { font-size: 0.8rem; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+.run-title { margin: 0.25rem 0 0; font-size: 2.2rem; color: var(--text); font-weight: 700; }
+.run-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: var(--space-lg); align-items: start; }
+.run-col { display: flex; flex-direction: column; gap: var(--space-lg); }
+.attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.graph-box { width: 100%; height: 520px; border-radius: var(--radius-md); overflow: hidden; background: #111417; }
