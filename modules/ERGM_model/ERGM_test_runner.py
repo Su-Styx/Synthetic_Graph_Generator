@@ -1,35 +1,42 @@
-# import sys, os
-# from pathlib import Path
-
+import json
 import subprocess
+import sys
 
-mtx_path = "/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Soc-Wiki-Vote/soc-wiki-Vote.mtx"
+mtx_path = "/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Soc-Wiki-Vote/wiki_vote_500_edgelist.txt"
 seed = "42"
 
-process = subprocess.Popen(
+process = subprocess.run(
     ["Rscript", "ERGM_fit_runner.R", mtx_path, seed],
     stdout=subprocess.PIPE,
-    stderr=subprocess.STDOUT,
-    text=True,
-    bufsize=1
+    stderr=subprocess.PIPE,
+    text=True
 )
 
-for line in process.stdout:
-    print(line, end="")
-
-process.wait()
+if process.stderr:
+    print("=== R STDERR / LOGS ===")
+    print(process.stderr)
 
 if process.returncode != 0:
     print(f"\nProcess failed with exit code {process.returncode}")
-# sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'ERGM_model'))
-# from ERGM_endpoint import fit_and_generate_from_file
+    sys.exit(process.returncode)
 
-# edge_file = Path(__file__).resolve().parent.parent.parent / "Data" / "woc-wiki-Vote" / ""
-# assert edge_file.exists(), f"File not found: {edge_file}"
+try:
+    result = json.loads(process.stdout)
+except json.JSONDecodeError as e:
+    print("Failed to parse JSON from stdout")
+    print("Raw stdout:")
+    print(process.stdout[:2000])
+    raise
 
-# result = fit_and_generate_from_file(
-#     file_path=str(edge_file),
-#     seed=42
-# )
-# print(result)
+print("=== JSON SUMMARY ===")
+print("Top-level keys:", list(result.keys()))
+print("Node count:", len(result.get("nodes", [])))
+print("Edge count:", len(result.get("edges", [])))
+print("Metadata keys:", list(result.get("metadata", {}).keys()))
 
+assert "nodes" in result, "Missing nodes"
+assert "edges" in result, "Missing edges"
+assert "metadata" in result, "Missing metadata"
+assert result["metadata"].get("fitted") is True, "metadata.fitted is not True"
+
+print("ERGM runner output is valid.")

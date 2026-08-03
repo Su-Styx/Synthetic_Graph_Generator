@@ -66,7 +66,7 @@ export default function RunDetailPage() {
           </div>
           <div className="run-actions">
             <button className="btn btn-neutral" onClick={() => setShowModal(true)}>⬇ Download</button>
-            <button className="btn btn-accent" onClick={() => navigate("/workload-query")}>
+            <button className="btn btn-accent" onClick={() => navigate("/workload-query", { state: { runId: run.id } })}>
               Workload Query Suite
             </button>
           </div>

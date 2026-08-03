@@ -15,6 +15,7 @@ class Run(models.Model):
         # BA = "barabasi_albert", "Barabasi-Albert","ba","BA"
         ER = "erdos_renyi", "Erdos-Renyi",
         BA = "barabasi_albert", "Barabasi-Albert",
+        ERGM ="ergm","ERGM",
 
     name=models.CharField(max_length=100)
     job_type=models.CharField(max_length=100)

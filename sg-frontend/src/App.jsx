@@ -10,6 +10,9 @@ import RunDetailPage from "./pages/RunDetailPage";
 import SettingsPage from "./pages/SettingsPage";
 import AboutPage from "./pages/AboutPage";
 import DashboardPage from "./pages/DashboardPage";
+import WorkloadQueryPage from "./pages/WorkloadQueryPage";
+import QuickViewPage from "./pages/QuickViewPage";
+
 
 export default function App() {
   const navigate = useNavigate();
@@ -35,7 +38,7 @@ export default function App() {
         left: "50%",
         transform: "translate(-50%, -50%)",   // pull back by half width & height
 
-        width: "650px",
+        width: "700px",
         height: "63px",
         padding: "0 1.2rem",
         display: "flex",
@@ -62,6 +65,7 @@ export default function App() {
           <NavLink
             to="/"
             style={({ isActive }) => ({
+              zIndex:1000,
               display: "flex",
               alignItems: "center",
               gap: "0.4rem",
@@ -112,7 +116,7 @@ export default function App() {
           </NavLink>
 
           <NavLink
-            to="/runs"
+            to="/quick-view"
             style={({ isActive }) => ({
               display: "flex",
               alignItems: "center",
@@ -126,7 +130,7 @@ export default function App() {
             })}
           >
             <span style={{ fontSize: "0.9rem" }}>▤</span>
-            <span>Runs</span>
+            <span>Quick View</span>
           </NavLink>
 
           <NavLink
@@ -220,6 +224,8 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/workload-query" element={<WorkloadQueryPage />} />
+        <Route path="/quick-view" element={<QuickViewPage />} />
       </Routes>
     </div>
   );

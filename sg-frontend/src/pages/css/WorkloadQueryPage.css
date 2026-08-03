@@ -1,0 +1,224 @@
+.wq-page {
+  min-height: 100vh;
+  min-width: 95vw;
+
+  background: #111417;
+  color: #f4f4f4;
+  padding: 2.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.wq-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.wq-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: #9a9a9a;
+}
+
+.wq-title {
+  font-size: 1.8rem;
+  margin: 0.25rem 0 0.5rem;
+  color: #f4f4f4;
+}
+
+.wq-subtitle {
+  color: #b5b5b5;
+  font-size: 0.95rem;
+  max-width: 60ch;
+  margin: 0;
+}
+
+.wq-error {
+  color: #ff8b8b;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+/* Panels — consistent with RunDetailPage */
+.panel {
+    width:auto;
+
+  background: #17191c;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.panel.accent {
+  border-color: rgba(192, 82, 75, 0.4);
+}
+
+.panel-title {
+  font-size: 1rem;
+  margin: 0 0 1rem;
+  color: #f4f4f4;
+}
+
+.panel-title.error {
+  color: #ff8b8b;
+}
+
+/* Form layout */
+.wq-form-row {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.wq-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 220px;
+  flex: 1;
+}
+
+.wq-field label {
+  font-size: 0.8rem;
+  color: #9a9a9a;
+  text-transform: capitalize;
+}
+
+.wq-field input,
+.wq-field select {
+  background: #0f1113;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  color: #f4f4f4;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.wq-field input:focus,
+.wq-field select:focus {
+  border-color: #c0524b;
+}
+
+.wq-hint {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+}
+
+/* Buttons */
+.btn {
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.btn-accent {
+  background: #c0524b;
+  color: #fff;
+}
+
+.btn-neutral {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f4f4f4;
+}
+
+/* Metrics display */
+.metric-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.9rem;
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-row span:first-child {
+  color: #b5b5b5;
+  text-transform: capitalize;
+}
+
+.metric-row span:last-child {
+  color: #f4f4f4;
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+/* Code blocks */
+.code-block {
+  background: #0f1113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 1rem;
+  font-size: 0.82rem;
+  color: #d8d8d8;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 0.75rem;
+}
+
+.code-block.error {
+  color: #ff8b8b;
+  border-color: rgba(255, 139, 139, 0.3);
+}
+
+/* Empty state */
+.empty-note {
+  color: #6f6f6f;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Tags (shared with RunDetailPage) */
+.tag {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d8d8d8;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  margin: 0.2rem 0.3rem 0.2rem 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .wq-page {
+    padding: 1.5rem;
+  }
+
+  .wq-form-row {
+    flex-direction: column;
+  }
+
+  .wq-field {
+    min-width: 100%;
+  }
+}

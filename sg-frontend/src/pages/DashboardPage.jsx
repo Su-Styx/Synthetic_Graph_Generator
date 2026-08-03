@@ -1,24 +1,30 @@
 // src/pages/DashboardPage.jsx
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { authFetch } from "../api/authFetch";   // ⬅️ import the helper
+import { Link, useNavigate } from "react-router-dom";
+import { authFetch } from "../api/authFetch";
+import { Panel } from "./ui/Panel-Light";
+import { Button } from "./ui/Button";
+import { StatusTag } from "./ui/Tag";
 import bgImage from "../assets/bcg.png";
+import "./css/tokens.css";
+import "./css/ui.css";
+
+const NAVBAR_HEIGHT = 88;
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const username = localStorage.getItem("username") || "Unknown user";
 
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // use this effect block to fetch runs on component mount
   useEffect(() => {
     async function fetchRuns() {
       setLoading(true);
       setError("");
 
       try {
-        // ONE request using authFetch – it will refresh if needed
         const res = await authFetch("http://127.0.0.1:8000/api/runs/");
         if (!res.ok) {
           throw new Error("Failed to load runs");
@@ -26,13 +32,12 @@ export default function DashboardPage() {
 
         const data = await res.json();
 
-        // Filter to only this user's runs if your API returns all runs.
         const userRuns = Array.isArray(data)
           ? data.filter(
               (run) =>
                 run.user === username ||
                 run.owner === username ||
-                !run.user // fallback if user field not present
+                !run.user
             )
           : [];
 
@@ -48,300 +53,414 @@ export default function DashboardPage() {
   }, [username]);
 
   return (
-    <div
-      style={{
-        position: "relative",
-        minHeight: "100vh",
-        width: "100vw",
-        overflow: "hidden",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      {/* Blurred background */}
+    <>
       <div
         style={{
-          minHeight: "100vh",
-          width: "100vw",
+          position: "fixed",
+          inset: 0,
           backgroundImage: `url(${bgImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
           filter: "blur(8px)",
+          transform: "scale(1.03)",
+          pointerEvents: "none",
+          zIndex: -2,
         }}
       />
 
-      {/* Profile circle (top-right) */}
-      <Link
-        to="/settings"
-        style={{
-          position: "absolute",
-          top: "4%",
-          right: "2%",
-          width: "65px",
-          height: "65px",
-          borderRadius: "999px",
-          background: "rgba(226, 220, 220, 0.22)",
-          border: "1px solid rgba(255, 255, 255, 0.35)",
-          backdropFilter: "blur(16px) saturate(140%)",
-          WebkitBackdropFilter: "blur(16px) saturate(140%)",
-          boxShadow:
-            "0 18px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "white",
-          textDecoration: "none",
-          fontSize: "1.8rem",
-          zIndex: 20,
-        }}
-      >
-        👤
-      </Link>
-
-      {/* Main dashboard foreground (sidebar + table) */}
       <div
         style={{
-          position: "absolute",
-          top: "25%",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: "flex",
-          padding: "1.5rem 2rem",
-          gap: "1.5rem",
-          zIndex: 10,
-          backgroundColor: "#9b2e2e88",
+          position: "fixed",
+          inset: 0,
+          // background:
+            // "linear-gradient(180deg, rgba(14,16,20,0.42) 0%, rgba(14,16,20,0.60) 100%)",
+          pointerEvents: "none",
+          zIndex: -1,
+        }}
+      />
+
+      <main
+        style={{
+          position: "relative",
+          minWidth: "99vw",
+          minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
+          padding: `${NAVBAR_HEIGHT + 24}px 24px 24px`,
+          boxSizing: "border-box",
         }}
       >
-        {/* Left sidebar (unchanged) */}
+        <Link
+          to="/settings"
+          style={{
+            position: "fixed",
+            top: `${NAVBAR_HEIGHT + 12}px`,
+            right: "24px",
+            width: "60px",
+            height: "60px",
+            borderRadius: "999px",
+            background: "rgba(255,255,255,0.14)",
+            border: "1px solid rgba(255,255,255,0.22)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            boxShadow: "0 14px 34px rgba(0,0,0,0.28)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white",
+            textDecoration: "none",
+            fontSize: "1.5rem",
+            zIndex: 20,
+          }}
+        >
+          👤
+        </Link>
+
         <div
           style={{
-            width: "500px",
+            maxWidth: "1400px",
+            margin: "0 auto",
             display: "flex",
             flexDirection: "column",
-            backgroundColor: "rgba(122, 98, 187, 0.8)",
-          }}
-        >
-          {/* Models List card */}
-          <div
-            style={{
-              backgroundColor: "rgba(30, 30, 30, 0.8)",
-              maxWidth: "50%",
-              borderRadius: "24px",
-              padding: "1rem",
-              boxShadow: "0 12px 24px rgba(0, 0, 0, 0.5)",
-              color: "white",
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: "rgba(204, 163, 80, 0.95)",
-                borderRadius: "16px 16px 0 0",
-                padding: "0.7rem 1rem",
-                fontWeight: 600,
-                textAlign: "center",
-              }}
-            >
-              Models List
-            </div>
-
-            <div
-              style={{
-                marginTop: "0.9rem",
-                backgroundColor: "rgba(240, 240, 240, 0.92)",
-                borderRadius: "24px",
-                padding: "2rem 1.5rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <button
-                type="button"
-                style={{
-                  width: "90px",
-                  height: "90px",
-                  borderRadius: "24px",
-                  border: "none",
-                  backgroundColor: "rgba(204, 163, 80, 0.95)",
-                  color: "white",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  // Navigate to the graph generation page
-                  window.location.href = "/models";
-                }}
-              >
-                🔍 Browse
-              </button>
-            </div>
-          </div>
-
-          {/* Generate New Graph card */}
-          <div
-            style={{
-              backgroundColor: "rgba(30, 30, 30, 0.8)",
-              maxWidth: "50%",
-              borderRadius: "24px",
-              padding: "1rem",
-              boxShadow: "0 12px 24px rgba(0, 0, 0, 0.5)",
-              color: "white",
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: "rgba(72, 160, 72, 0.95)",
-                borderRadius: "16px 16px 0 0",
-                padding: "0.7rem 1rem",
-                fontWeight: 600,
-                textAlign: "center",
-              }}
-            >
-              Generate New Graph
-            </div>
-
-            <div
-              style={{
-                marginTop: "0.9rem",
-                backgroundColor: "rgba(240, 240, 240, 0.92)",
-                borderRadius: "24px",
-                padding: "2rem 1.5rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <button
-                type="button"
-                style={{
-                  width: "90px",
-                  height: "90px",
-                  borderRadius: "24px",
-                  border: "none",
-                  backgroundColor: "rgba(72, 160, 72, 0.95)",
-                  color: "white",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  // Navigate to the graph generation page
-                  window.location.href = "/create-run";
-                }}
-              >
-                ＋ Generate
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Right main table panel */}
-        <div
-          style={{
-            flex: 1,
-            backgroundColor: "#D9D9D9",
-            borderRadius: "0px",
-            padding: "0rem 2rem",
+            gap: "18px",
           }}
         >
           <div
             style={{
-              borderBottom: "2px solid #080808",
-              paddingBottom: "0.5rem",
-              marginBottom: "1rem",
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "baseline",
+              alignItems: "flex-end",
+              gap: "16px",
+              color: "white",
+              paddingRight: "88px",
+              
             }}
           >
-            <h2
+            <div>
+              <div
+                style={{
+                  fontSize: "0.82rem",
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  opacity: 0.8,
+                  marginBottom: "0.45rem",
+                }}
+              >
+                Graph Generation Workspace
+              </div>
+
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "2rem",
+                  lineHeight: 1.05,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                Dashboard
+              </h1>
+            </div>
+
+            <div
               style={{
-                margin: 0,
-                fontSize: "1.8rem",
-                letterSpacing: "0.08em",
-                color: "#080808",
+                fontSize: "0.92rem",
+                color: "rgba(255,255,255,0.88)",
+                whiteSpace: "nowrap",
               }}
             >
-              GENERATED GRAPHS -
-            </h2>
-            <span style={{ fontSize: "0.85rem", color: "#080808" }}>
-              Name | Model | Status | Time started 
-            </span>
+              Signed in as <strong>{username}</strong>
+            </div>
           </div>
 
-          {loading && <p>Loading runs…</p>}
-          {error && <p style={{ color: "crimson" }}>{error}</p>}
-
-          {!loading && !error && runs.length === 0 && (
-            <p style={{ color: "#080808" }}>No runs yet.</p>
-          )}
-
-          {!loading && !error && runs.length > 0 && (
-            <table
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "320px minmax(0, 1fr)",
+              gap: "18px",
+              alignItems: "start",
+            }}
+          >
+            <div
               style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "0.95rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "18px",
               }}
             >
-              <tbody>
-                {runs.map((run, idx) => (
-                  <tr key={run.id ?? idx}>
-                    <td
-                      style={{
-                        color: "#080808",
-                        padding: "0.25rem",
-                        borderBottom: "1px solid #020202",
-                      }}
-                    >
-                      {idx + 1}
-                    </td>
+              <Panel title="Models List" action={<StatusTag status={`${runs.length} runs`} />}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "var(--muted, #6b7280)",
+                      fontSize: "0.95rem",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Browse the available graph generation models and inspect their
+                    parameters before starting a run.
+                  </p>
 
-                    <td
+                  <Button
+                    type="button"
+                    variant="neutral"
+                    onClick={() => navigate("/models")}
+                    style={{ width: "100%" }}
+                  >
+                    Browse Models
+                  </Button>
+                </div>
+              </Panel>
+
+              <Panel title="Generate New Graph" action={<StatusTag status="Ready" />}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px",
+                    
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "var(--muted, #6b7280)",
+                      fontSize: "0.95rem",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Create a new run using BA, ER, or ERGM generation and follow
+                    it through to completion from the run detail view.
+                  </p>
+
+                  <Button
+                    type="button"
+                    variant="accent"
+                    onClick={() => navigate("/create-run")}
+                    style={{ width: "100%" }}
+                  >
+                    Create Run
+                  </Button>
+                </div>
+              </Panel>
+            </div>
+
+            <Panel
+
+              title="Generated Graphs"
+              
+              
+              action={
+                <span
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "var(--muted, #6b7280)",
+                    letterSpacing: "0.03em",
+                    // height: ".5rem",
+                    // minWidth: "1800px",
+                  }}
+                >
+                  Name · Model · Status · Time started
+                </span>
+              }
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  height: `calc(100vh - ${NAVBAR_HEIGHT + 170}px)`,
+                  // width: "1800px",
+                  minHeight: "420px",
+                  minWidth: "100%",
+                }}
+              > 
+                {loading && (
+                  <p style={{ margin: 0, color: "#111827" }}>Loading runs…</p>
+                )}
+
+                {error && (
+                  <p style={{ margin: 0, color: "crimson" }}>{error}</p>
+                )}
+
+                {!loading && !error && runs.length === 0 && (
+                  <p style={{ margin: 0, color: "#111827" }}>No runs yet.</p>
+                )}
+
+                {!loading && !error && runs.length > 0 && (
+                  <div
+                    style={{
+                      flex: 1,
+                      minHeight: 0,
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      borderTop: "1px solid rgba(0,0,0,0.08)",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    <table
                       style={{
-                        padding: "0.25rem",
-                        borderBottom: "1px solid #797878",
-                        color: "#080808",
-                        fontWeight: "bold",
-                      }}
-                      // linkto={`/runs/${run.id}`}  // Optional: if you want to make the name clickable
-                    >
-                      <a style={{color:"black", textDecoration:"underline", fontWeight:"bold"}} href={`/runs/${run.id}`}> {run.name} </a>
-                    </td>
-                    <td
-                      style={{
-                        padding: "0.25rem",
-                        borderBottom: "1px solid #797878",
-                        color: "#080808",
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        fontSize: "0.95rem",
                       }}
                     >
-                      {run.model}
-                    </td>
-                    <td
-                      style={{
-                        padding: "0.25rem",
-                        borderBottom: "1px solid #797878",
-                        color: "#080808",
-                      }}
-                    >
-                      {run.status}
-                    </td>
-                    <td
-                      style={{
-                        padding: "0.25rem",
-                        borderBottom: "1px solid #797878",
-                        color: "#080808",
-                      }}
-                    >
-                      {run.started_at || run.created_at || "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                      <thead
+                        style={{
+                          position: "sticky",
+                          top: 0,
+                          background: "rgba(255,255,255,0.97)",
+                          zIndex: 2,
+                        }}
+                      >
+                        <tr>
+                          <th
+                            style={{
+                              textAlign: "left",
+                              padding: "0.7rem 0.4rem",
+                              fontSize: "0.78rem",
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "#6b7280",
+                              borderBottom: "1px solid rgba(0,0,0,0.08)",
+                            }}
+                          >
+                            #
+                          </th>
+                          <th
+                            style={{
+                              textAlign: "left",
+                              padding: "0.7rem 0.4rem",
+                              fontSize: "0.78rem",
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "#6b7280",
+                              borderBottom: "1px solid rgba(0,0,0,0.08)",
+                            }}
+                          >
+                            Name
+                          </th>
+                          <th
+                            style={{
+                              textAlign: "left",
+                              padding: "0.7rem 0.4rem",
+                              fontSize: "0.78rem",
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "#6b7280",
+                              borderBottom: "1px solid rgba(0,0,0,0.08)",
+                            }}
+                          >
+                            Model
+                          </th>
+                          <th
+                            style={{
+                              textAlign: "left",
+                              padding: "0.7rem 0.4rem",
+                              fontSize: "0.78rem",
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "#6b7280",
+                              borderBottom: "1px solid rgba(0,0,0,0.08)",
+                            }}
+                          >
+                            Status
+                          </th>
+                          <th
+                            style={{
+                              textAlign: "left",
+                              padding: "0.7rem 0.4rem",
+                              fontSize: "0.78rem",
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "#6b7280",
+                              borderBottom: "1px solid rgba(0,0,0,0.08)",
+                            }}
+                          >
+                            Time started
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {runs.map((run, idx) => (
+                          <tr key={run.id ?? idx}>
+                            <td
+                              style={{
+                                padding: "0.8rem 0.4rem",
+                                borderBottom: "1px solid rgba(0,0,0,0.06)",
+                                color: "#111827",
+                                verticalAlign: "middle",
+                              }}
+                            >
+                              {idx + 1}
+                            </td>
+
+                            <td
+                              style={{
+                                padding: "0.8rem 0.4rem",
+                                borderBottom: "1px solid rgba(0,0,0,0.06)",
+                                verticalAlign: "middle",
+                              }}
+                            >
+                              <Link
+                                to={`/runs/${run.id}`}
+                                style={{
+                                  color: "#111827",
+                                  textDecoration: "underline",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {run.name}
+                              </Link>
+                            </td>
+
+                            <td
+                              style={{
+                                padding: "0.8rem 0.4rem",
+                                borderBottom: "1px solid rgba(0,0,0,0.06)",
+                                verticalAlign: "middle",
+                              }}
+                            >
+                              <StatusTag status={run.model} />
+                            </td>
+
+                            <td
+                              style={{
+                                padding: "0.8rem 0.4rem",
+                                borderBottom: "1px solid rgba(0,0,0,0.06)",
+                                verticalAlign: "middle",
+                              }}
+                            >
+                              <StatusTag status={run.status} />
+                            </td>
+
+                            <td
+                              style={{
+                                padding: "0.8rem 0.4rem",
+                                borderBottom: "1px solid rgba(0,0,0,0.06)",
+                                color: "#111827",
+                                verticalAlign: "middle",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {run.started_at || run.created_at || "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </Panel>
+          </div>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 }

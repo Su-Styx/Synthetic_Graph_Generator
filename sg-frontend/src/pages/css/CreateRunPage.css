@@ -3,3 +3,32 @@
 .create-bg { min-height: 100vh; width: 100vw; background-size: cover; background-position: center; background-repeat: no-repeat; filter: blur(8px); }
 .create-content { position: absolute; inset: 0; overflow-y: auto; z-index: 10; padding: 2.5rem 3rem; display: flex; justify-content: center; }
 .create-panel-wrap { width: 100%; max-width: 480px; margin-top: 10%; }
+.attr-toggle-row,
+.attr-section-header,
+.attr-rule-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.attr-editor-wrap,
+.attr-section,
+.attr-rule-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.attr-rule-fields {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.attr-add-btn,
+.attr-remove-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #f4f4f4;
+  border-radius: 8px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}

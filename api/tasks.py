@@ -1,11 +1,13 @@
 from celery import shared_task
 from django.utils import timezone
 from .models import Run
-from .services.generators import generate_er, generate_ba
+from .services.generators import generate_er, generate_ba, generate_ERGM
+from .services.attributes import apply_schema
 
 JOB_DISPATCH = {
     "er": generate_er,
     "ba": generate_ba,
+    "ergm": generate_ERGM
 }
 
 @shared_task
@@ -25,6 +27,8 @@ def execute_run(run_id):
 
         generator_fn = JOB_DISPATCH[job_type]
         result = generator_fn(run.params)
+
+        result = apply_schema(result, run.params.get("schema"))   #apply schema goes here
 
         run.result = result
         run.status = "completed"

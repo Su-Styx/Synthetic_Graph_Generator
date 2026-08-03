@@ -2,8 +2,10 @@ import subprocess
 import json
 import os
 from typing import Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile  
 from pydantic import BaseModel, field_validator
+import shutil
+import uuid
 
 app = FastAPI()
 
@@ -35,6 +37,22 @@ FIT_R_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "ERGM_fit_runner.R")
 FIT_R_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "ERGM_fit_runner.R")
 
 
+
+
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@app.post("/api/upload/")
+async def upload_file(file: UploadFile = File(...)):
+    ext = os.path.splitext(file.filename)[1]
+    saved_name = f"{uuid.uuid4().hex}{ext}"
+    saved_path = os.path.join(UPLOAD_DIR, saved_name)
+
+    with open(saved_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    return {"filepath": saved_path}
+
 def fit_and_generate_from_file(file_path: str, seed: Optional[int] = None) -> dict:
     seed_arg = str(seed) if seed is not None else "NA"
 
@@ -43,7 +61,7 @@ def fit_and_generate_from_file(file_path: str, seed: Optional[int] = None) -> di
             ["Rscript", FIT_R_SCRIPT_PATH, file_path, seed_arg],
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=7200 #temp 2 hr fit and gen
         )
     except subprocess.TimeoutExpired:
         raise HTTPException(
@@ -111,7 +129,7 @@ def generate(
             ],
             capture_output=True,
             text=True,
-            timeout=120       # ERGM can be slow — 2 min ceiling
+            timeout=7200      # temp 2 hr testing
         )
     except subprocess.TimeoutExpired:
         raise HTTPException(
