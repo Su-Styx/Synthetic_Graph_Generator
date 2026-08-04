@@ -186,3 +186,5 @@ if __name__ == "__main__":
     )
 
     print(json.dumps(result, indent=4))
+
+    # python VGAE_endpoint.py --edges_path /home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges.csv --nodes_path  /home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv --n 30 --threshold 0.5 --model_name VGAE --epochs 2 --hidden1 32 --hidden2 16 --lr .01 --seed 42 
