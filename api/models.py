@@ -16,6 +16,7 @@ class Run(models.Model):
         ER = "erdos_renyi", "Erdos-Renyi",
         BA = "barabasi_albert", "Barabasi-Albert",
         ERGM ="ergm","ERGM",
+        VGAE = "vgae", "Variational Graph Autoencoder", 
 
     name=models.CharField(max_length=100)
     job_type=models.CharField(max_length=100)

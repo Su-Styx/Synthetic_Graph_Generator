@@ -2,6 +2,7 @@
 from modules.BA_model.BA_endpoint import generate as generate_BA_graph
 from modules.ER_model.ER_endpoint import generate_er_graph 
 from modules.ERGM_model.ERGM_endpoint import fit_and_generate_from_file as generate_ERGM_graph
+from modules.VGAE_model.VGAE_endpoint import train_and_generate as generate_VGAE_graph
 
 import json
 import subprocess
@@ -90,3 +91,17 @@ def generate_ERGM(params: dict) -> dict:
     file_path = params["filepath"]
     seed = params.get("seed")
     return generate_ERGM_graph(file_path, seed)
+
+def generate_VGAE(params: dict) -> dict:
+    return generate_VGAE_graph(
+        edges_path=params["filepath"],
+        nodes_path=params.get("nodes_filepath"),
+        n=params["n"],
+        threshold=params["threshold"],
+        seed=params.get("seed"),
+        epochs=params.get("epochs", 200),
+        hidden1=params.get("hidden1", 32),
+        hidden2=params.get("hidden2", 16),
+        lr=params.get("lr", 0.01),
+        checkpoint=params.get("checkpoint"),
+    )

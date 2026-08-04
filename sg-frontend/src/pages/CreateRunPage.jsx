@@ -12,6 +12,7 @@ import "./css/tokens.css";
 import "./css/ui.css";
 import "./css/CreateRunPage.css";
 
+
 export default function CreateRunPage() {
   const navigate = useNavigate();
 
@@ -35,10 +36,20 @@ export default function CreateRunPage() {
   const [nodeAttributes, setNodeAttributes] = useState([]);
   const [edgeAttributes, setEdgeAttributes] = useState([]);
 
+  // VGAE parameters
+  const [threshold, setThreshold] = useState(0.5);
+  const [epochs, setEpochs] = useState(200);
+  const [hidden1, setHidden1] = useState(32);
+  const [hidden2, setHidden2] = useState(16);
+  const [lr, setLr] = useState(0.01);
+  const [nodesFile, setNodesFile] = useState(null);
+  const [nodesFilepath, setNodesFilepath] = useState("");
+
   const modelMap = {
     ba: "barabasi_albert",
     er: "erdos_renyi",
     ergm: "ergm",
+    vgae: "vgae",
   };
   const model = modelMap[jobType] || "ba";
 
@@ -49,13 +60,48 @@ export default function CreateRunPage() {
 
     try {
       let uploadedPath = filepath;
+      let uploadedNodesPath = nodesFilepath;
 
-      if (jobType === "ergm") {
-        if (!file) throw new Error("Please choose a file for ERGM");
+      if (jobType === "ergm" || jobType === "vgae") {
+        if (!file) throw new Error(`Please choose a file for ${jobType.toUpperCase()}`);
         setUploading(true);
         uploadedPath = await uploadFile(file);
         setFilepath(uploadedPath);
+
+        if (jobType === "vgae" && nodesFile) {
+          uploadedNodesPath = await uploadFile(nodesFile);
+          setNodesFilepath(uploadedNodesPath);
+        }
+
         setUploading(false);
+      }
+
+      let jobParams;
+      switch (jobType) {
+        case "ba":
+          jobParams = { n: Number(n), m: Number(m), seed: Number(seed) };
+          break;
+        case "er":
+          jobParams = { n: Number(n), p: Number(p), seed: Number(seed) };
+          break;
+        case "ergm":
+          jobParams = { filepath: uploadedPath, seed: Number(seed) };
+          break;
+        case "vgae":
+          jobParams = {
+            filepath: uploadedPath,
+            nodes_filepath: uploadedNodesPath || undefined,
+            n: Number(n),
+            threshold: Number(threshold),
+            epochs: Number(epochs),
+            hidden1: Number(hidden1),
+            hidden2: Number(hidden2),
+            lr: Number(lr),
+            seed: Number(seed),
+          };
+          break;
+        default:
+          throw new Error(`Unknown job type: ${jobType}`);
       }
 
       const payload = {
@@ -63,18 +109,16 @@ export default function CreateRunPage() {
         job_type: jobType,
         model,
         params: {
-          ...(jobType === "ba"
-            ? { n: Number(n), m: Number(m), seed: Number(seed) }
-            : jobType === "er"
-            ? { n: Number(n), p: Number(p), seed: Number(seed) }
-            : { filepath: uploadedPath, seed: Number(seed) }),
+          ...jobParams,
           schema: {
             node_type: nodeType || "node",
             edge_type: edgeType || "connected_to",
-            ...(showAttributes ? {
-              node_attributes: buildAttributeConfig(nodeAttributes),
-              edge_attributes: buildAttributeConfig(edgeAttributes),
-            } : {}),
+            ...(showAttributes
+              ? {
+                  node_attributes: buildAttributeConfig(nodeAttributes),
+                  edge_attributes: buildAttributeConfig(edgeAttributes),
+                }
+              : {}),
           },
         },
       };
@@ -127,31 +171,123 @@ export default function CreateRunPage() {
                   <option value="ba">Barabasi-Albert</option>
                   <option value="er">Erdos-Renyi</option>
                   <option value="ergm">ERGM (fit from file)</option>
+                  <option value="vgae">VGAE (train from file)</option>
                 </select>
               </Field>
 
-              {jobType === "ergm" ? (
-                <Field label="Input graph file" hint="Upload .mtx, .txt, or .csv edge list">
-                  <input className="field-input" type="file" accept=".mtx,.txt,.csv" onChange={(e) => setFile(e.target.files?.[0] || null)} required />
-                </Field>
-              ) : (
-                <>
-                  <Field label="n" hint="Number of nodes">
-                    <input className="field-input" type="number" value={n} onChange={(e) => setN(e.target.value)} min="1" required />
+                {jobType === "ergm" ? (
+                  <Field label="Input graph file" hint="Upload .mtx, .txt, or .csv edge list">
+                    <input
+                      className="field-input"
+                      type="file"
+                      accept=".mtx,.txt,.csv"
+                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      required
+                    />
                   </Field>
-
-                  {jobType === "ba" ? (
-                    <Field label="m" hint="Edges to attach per new node">
-                      <input className="field-input" type="number" value={m} onChange={(e) => setM(e.target.value)} min="1" required />
+                ) : jobType === "vgae" ? (
+                  <>
+                    <Field label="Edges file" hint="Upload edges.csv used for training">
+                      <input
+                        className="field-input"
+                        type="file"
+                        accept=".csv"
+                        onChange={(e) => setFile(e.target.files?.[0] || null)}
+                        required
+                      />
                     </Field>
-                  ) : (
-                    <Field label="p" hint="Edge probability">
-                      <input className="field-input" type="number" step="0.01" value={p} onChange={(e) => setP(e.target.value)} min="0" max="1" required />
-                    </Field>
-                  )}
-                </>
-              )}
 
+                    <Field label="Nodes file" hint="Optional nodes.csv for feature generation">
+                      <input
+                        className="field-input"
+                        type="file"
+                        accept=".csv"
+                        onChange={(e) => setNodesFile(e.target.files?.[0] || null)}
+                      />
+                    </Field>
+
+                    <Field label="n" hint="Number of nodes to generate">
+                      <input
+                        className="field-input"
+                        type="number"
+                        value={n}
+                        onChange={(e) => setN(e.target.value)}
+                        min="2"
+                        required
+                      />
+                    </Field>
+
+                    <Field label="threshold" hint="Edge threshold, between 0 and 1">
+                      <input
+                        className="field-input"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max="0.99"
+                        value={threshold}
+                        onChange={(e) => setThreshold(e.target.value)}
+                        required
+                      />
+                    </Field>
+
+                    <Field label="epochs">
+                      <input
+                        className="field-input"
+                        type="number"
+                        min="1"
+                        value={epochs}
+                        onChange={(e) => setEpochs(e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="hidden1">
+                      <input
+                        className="field-input"
+                        type="number"
+                        min="1"
+                        value={hidden1}
+                        onChange={(e) => setHidden1(e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="hidden2">
+                      <input
+                        className="field-input"
+                        type="number"
+                        min="1"
+                        value={hidden2}
+                        onChange={(e) => setHidden2(e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="learning rate">
+                      <input
+                        className="field-input"
+                        type="number"
+                        step="0.001"
+                        min="0.0001"
+                        value={lr}
+                        onChange={(e) => setLr(e.target.value)}
+                      />
+                    </Field>
+                  </>
+                ) : (
+                  <>
+                    <Field label="n" hint="Number of nodes">
+                      <input className="field-input" type="number" value={n} onChange={(e) => setN(e.target.value)} min="1" required />
+                    </Field>
+
+                    {jobType === "ba" ? (
+                      <Field label="m" hint="Edges to attach per new node">
+                        <input className="field-input" type="number" value={m} onChange={(e) => setM(e.target.value)} min="1" required />
+                      </Field>
+                    ) : (
+                      <Field label="p" hint="Edge probability">
+                        <input className="field-input" type="number" step="0.01" value={p} onChange={(e) => setP(e.target.value)} min="0" max="1" required />
+                      </Field>
+                    )}
+                  </>
+                )}
               <Field label="seed" hint="For reproducibility">
                 <input className="field-input" type="number" value={seed} onChange={(e) => setSeed(e.target.value)} />
               </Field>

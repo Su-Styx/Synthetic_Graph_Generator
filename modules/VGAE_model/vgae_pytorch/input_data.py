@@ -20,78 +20,26 @@ def parse_index_file(filename):
         index.append(int(line.strip()))
     return index
 
-def load_data(dataset):
-    # MY OWN CHANGES:
-    if dataset =='disease_features':
 
-        # RAN INTO MEMORY CONSTRAINTS
-        # print('LOOK DISEASE DATASET FOUND')
-        # g= pd.read_csv('/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges.csv')
-        # n=pd.read_csv('/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv')
+def load_data(dataset, edges_path=None, nodes_path=None):
+    # if statement my own for testin
+    if dataset == 'disease_features':
 
+        edges_path = edges_path or '/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges.csv'
+        nodes_path = nodes_path or '/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv'
 
-        # # building adj matrix 
-        # G = nx.from_pandas_edgelist(g, source="x_index", target="y_index")
-        # adj = nx.adjacency_matrix(G)
-
-        # # building features matrix (F by N)
-        # # dropped insignificant columns
-        # n= n.drop('node_index', axis=1)
-        # n=n.drop('node_source',axis=1)
-
-        # type_encoded = pd.get_dummies(n['node_type'], prefix='type')
-        # name_encoded = pd.get_dummies(n['node_name'], prefix='name')
-
-        # features = pd.concat([type_encoded, name_encoded], axis=1)
-
-        # # n['node_type'].str.encode('utf-8')
-        # # n['node_name'].str.encode('utf-8')
-        # # pd.factorize(n['node_type'])
-        # features = features.to_numpy(dtype=np.float32)
-
-        # STILL GET ERROR WITH THE FOLLOWING 
-        # RUN train.py to test 8***************************************
-
-        g = pd.read_csv('/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges.csv')
-        n = pd.read_csv('/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv')
+        g = pd.read_csv(edges_path)
+        n = pd.read_csv(nodes_path)
 
         n = n.sort_values('node_index').reset_index(drop=True)
-
         node_order = n['node_index'].tolist()
         G = nx.from_pandas_edgelist(g, source='x_index', target='y_index')
-
         adj = nx.adjacency_matrix(G, nodelist=node_order)
 
         type_features = pd.get_dummies(n['node_type'], prefix='type', dtype=np.int8)
         features = type_features.to_numpy(dtype=np.float32)
 
-
-
-
-
-
-        # G = nx.from_pandas_edgelist(g, source="x_index", target="y_index")
-        # adj = nx.adjacency_matrix(G)
-
-        # n = n.sort_values('node_index').reset_index(drop=True)
-
-        # # n= n.drop('node_index', axis=1)
-        # n=n.drop('node_source',axis=1)
-
-        # # n = n.sort_values('node_index').reset_index(drop=True)
-
-        # type_features = pd.get_dummies(n['node_type'], prefix='type', dtype=np.int8)
-
-        # features = type_features.to_numpy(dtype=np.float32)
-
-        print(features.shape)
-        print(type_features.head())
-
-        return adj, features 
-
-
-
-
+        return adj, features
 
         
 

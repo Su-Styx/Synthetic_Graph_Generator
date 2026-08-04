@@ -1,13 +1,15 @@
 from celery import shared_task
 from django.utils import timezone
 from .models import Run
-from .services.generators import generate_er, generate_ba, generate_ERGM
+from .services.generators import generate_er, generate_ba, generate_ERGM, generate_VGAE
 from .services.attributes import apply_schema
+
 
 JOB_DISPATCH = {
     "er": generate_er,
     "ba": generate_ba,
-    "ergm": generate_ERGM
+    "ergm": generate_ERGM,
+    "vgae": generate_VGAE
 }
 
 @shared_task
