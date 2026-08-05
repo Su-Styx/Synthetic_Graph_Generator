@@ -22,7 +22,30 @@ def parse_index_file(filename):
 
 
 def load_data(dataset, edges_path=None, nodes_path=None):
-    # if statement my own for testin
+    print("reading edges", flush=True)
+    g = pd.read_csv(edges_path)
+    print("edges shape", g.shape, "columns", list(g.columns), flush=True)
+
+    print("reading nodes", flush=True)
+    n = pd.read_csv(nodes_path)
+    print("nodes shape", n.shape, "columns", list(n.columns), flush=True)
+
+    print("sorting nodes", flush=True)
+    n = n.sort_values("node_index").reset_index(drop=True)
+
+    print("building graph", flush=True)
+    G = nx.from_pandas_edgelist(g, source="x_index", target="y_index")
+    print("graph built", G.number_of_nodes(), G.number_of_edges(), flush=True)
+
+    print("building adjacency", flush=True)
+    adj = nx.adjacency_matrix(G, nodelist=n["node_index"].tolist())
+    print("adjacency built", adj.shape, flush=True)
+
+    print("building features", flush=True)
+    type_features = pd.get_dummies(n["node_type"], prefix="type", dtype=np.int8)
+    features = type_features.to_numpy(dtype=np.float32)
+    print("features built", features.shape, flush=True)
+        # if statement my own for testin
     if dataset == 'disease_features':
 
         edges_path = edges_path or '/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges.csv'

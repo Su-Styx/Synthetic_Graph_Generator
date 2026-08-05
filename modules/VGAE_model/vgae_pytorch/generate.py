@@ -20,6 +20,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 # import model 
 def load_model(checkpoint_path):
+    print('model loaded')
     from input_data import load_data
     from preprocessing import preprocess_graph, sparse_to_tuple
 
@@ -54,6 +55,7 @@ def load_model(checkpoint_path):
     return model, features, checkpoint
 
 def generate_graph(model, adj_norm, features, num_nodes_out, threshold=0.5):
+    print('graph generating')
     """
     Encode the training graph, sample from latent space,
     then decode to produce a new adjacency matrix.

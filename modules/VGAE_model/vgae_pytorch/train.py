@@ -20,6 +20,7 @@ import os
 
 # Train on CPU (hide GPU) due to memory constraints
 os.environ['CUDA_VISIBLE_DEVICES'] = ""
+print('file running')
 
 def parse_cli():
     p = argparse.ArgumentParser()
@@ -31,17 +32,20 @@ def parse_cli():
     p.add_argument("--hidden1", type=int, default=args.hidden1_dim)
     p.add_argument("--hidden2", type=int, default=args.hidden2_dim)
     p.add_argument("--lr", type=float, default=args.learning_rate)
-    p.add_argument("--checkpoint_out", default="vgae_checkpoint.pt")
+    p.add_argument("--checkpoint_out", default="vgae_checkpoint2.pt")
     p.add_argument("--seed", type=int, default=None)
     return p.parse_args()
 
 
 cli = parse_cli()
+print('cli parsed')
 
 if cli.seed is not None:
     torch.manual_seed(cli.seed)
     np.random.seed(cli.seed)
 
+
+print('writing args to model usage')
 # override the shared args module so model.py picks up the right dims
 args.dataset = cli.dataset
 args.model = cli.model
@@ -50,16 +54,18 @@ args.hidden1_dim = cli.hidden1
 args.hidden2_dim = cli.hidden2
 args.learning_rate = cli.lr
 
+print('loading data')
 adj, features = load_data(args.dataset, edges_path=cli.edges_path, nodes_path=cli.nodes_path)
-
+print('data loaded')
 # Store original adjacency matrix (without diagonal entries) for later
 adj_orig = adj
 adj_orig = adj_orig - sp.dia_matrix((adj_orig.diagonal()[np.newaxis, :], [0]), shape=adj_orig.shape)
 adj_orig.eliminate_zeros()
-
+print("before mask_test_edges", adj.shape, adj.nnz, flush=True)
 adj_train, train_edges, val_edges, val_edges_false, test_edges, test_edges_false = mask_test_edges(adj)
+print("after mask_test_edges", flush=True)
 adj = adj_train
-
+print('preprocessing started')
 # Some preprocessing
 adj_norm = preprocess_graph(adj)
 
@@ -88,7 +94,7 @@ norm = adj.shape[0] * adj.shape[0] / float((adj.shape[0] * adj.shape[0] - adj.su
 adj_label = adj_train + sp.eye(adj_train.shape[0])
 adj_label = sparse_to_tuple(adj_label)
 
-
+print('model created')
 
 adj_norm = torch.sparse.FloatTensor(torch.LongTensor(adj_norm[0].T), 
                             torch.FloatTensor(adj_norm[1]), 
@@ -109,6 +115,7 @@ adj_label_dense = adj_label.to_dense()
 weight_mask = adj_label_dense.view(-1) == 1
 weight_tensor = torch.ones(weight_mask.size(0)) 
 weight_tensor[weight_mask] = pos_weight
+print('tensor creation done')
 
 # init model and optimizer
 model = getattr(model,args.model)(adj_norm)
@@ -116,6 +123,7 @@ optimizer = Adam(model.parameters(), lr=args.learning_rate)
 
 
 def get_scores(edges_pos, edges_neg, adj_rec):
+    print('getting scores')
 
     def sigmoid(x):
         return 1 / (1 + np.exp(-x))
@@ -151,6 +159,7 @@ def get_acc(adj_rec, adj_label_dense):
 
 # train model
 for epoch in range(args.num_epoch):
+    print('epoch', epoch)
     t = time.time()
 
     A_pred = model(features)
