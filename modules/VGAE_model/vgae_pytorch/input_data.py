@@ -48,8 +48,11 @@ def load_data(dataset, edges_path=None, nodes_path=None):
         # if statement my own for testin
     if dataset == 'disease_features':
 
-        edges_path = edges_path or '/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges.csv'
-        nodes_path = nodes_path or '/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv'
+        # edges_path = edges_path or '/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges.csv'
+        edges_path = edges_path or '/Users/nicholas/Desktop/MSC_Works/DISSERTATION/Synthetic_Graph_Generator/Synthetic_Graph_Generator/Data/Dataverse/edges.csv'
+
+        # nodes_path = nodes_path or '/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv'
+        nodes_path = nodes_path or '/Users/nicholas/Desktop/MSC_Works/DISSERTATION/Synthetic_Graph_Generator/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv'
 
         g = pd.read_csv(edges_path)
         n = pd.read_csv(nodes_path)

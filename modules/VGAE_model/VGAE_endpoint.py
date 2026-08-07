@@ -1,19 +1,30 @@
+# VGAE_endpoint.py
+
 import subprocess
 import json
 import uuid
 from pathlib import Path
 from typing import Optional
 
+import pandas as pd  # NEW: used to read node attributes
+
 
 BASE_DIR = Path(__file__).resolve().parent
 GENERATE_SCRIPT = BASE_DIR / "vgae_pytorch" / "generate.py"
-TRAIN_SCRIPT = BASE_DIR / "vgae_pytorch" / "train.py"
+TRAIN_SCRIPT    = BASE_DIR / "vgae_pytorch" / "train.py"
 
 CHECKPOINT_DIR = BASE_DIR / "media" / "vgae_checkpoints"
 CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def generate(checkpoint: str, n: int, t: float, seed: Optional[int] = None) -> dict:
+def generate(
+    checkpoint: str,
+    n: int,
+    t: float,
+    seed: Optional[int] = None,
+    edges_path: Optional[str] = None,
+    nodes_path: Optional[str] = None,
+) -> dict:
     checkpoint_path = Path(checkpoint)
     if not checkpoint_path.is_absolute():
         checkpoint_path = CHECKPOINT_DIR / checkpoint
@@ -29,6 +40,11 @@ def generate(checkpoint: str, n: int, t: float, seed: Optional[int] = None) -> d
         "--threshold", str(t),
     ]
 
+    if edges_path is not None:
+        cmd += ["--edges_path", str(edges_path)]
+    if nodes_path is not None:
+        cmd += ["--nodes_path", str(nodes_path)]
+
     if seed is not None:
         cmd += ["--seed", str(seed)]
 
@@ -38,13 +54,21 @@ def generate(checkpoint: str, n: int, t: float, seed: Optional[int] = None) -> d
         raise RuntimeError(f"VGAE generate failed: {result.stderr.strip()}")
 
     try:
-        return json.loads(result.stdout.strip())
-    except json.JSONDecodeError as e:
-        raise RuntimeError(
-            f"VGAE generate returned invalid JSON. "
-            f"stdout head: {result.stdout[:500]!r}, stderr head: {result.stderr[:500]!r}"
-        ) from e
-    
+            stdout = result.stdout.strip()
+            if not stdout:
+                raise RuntimeError(
+                    f"VGAE generate produced no output. "
+                    f"stderr head: {result.stderr[:500]!r}"
+                )
+
+            lines = [ln for ln in stdout.splitlines() if ln.strip()]
+            last = lines[-1]
+            return json.loads(last)
+    except (IndexError, json.JSONDecodeError) as e:
+            raise RuntimeError(
+                f"VGAE generate returned invalid JSON. "
+                f"stdout head: {result.stdout[:500]!r}, stderr head: {result.stderr[:500]!r}"
+            ) from e
 
 
 def train_vgae(
@@ -84,22 +108,32 @@ def train_vgae(
     if result.returncode != 0:
         raise RuntimeError(f"VGAE training failed: {result.stderr.strip()}")
 
-    try:
-        payload = json.loads(result.stdout.strip())
-    except json.JSONDecodeError as e:
-        raise RuntimeError(
-            f"VGAE train returned invalid JSON. "
-            f"stdout head: {result.stdout[:500]!r}, stderr head: {result.stderr[:500]!r}"
-        ) from e
+    # Training finished successfully; result.stdout just contains logs, not JSON.
+    stdout_head = result.stdout[:500]
+    stderr_head = result.stderr[:500]
 
-    payload["checkpoint"] = str(checkpoint_path)
-    payload["checkpoint_name"] = checkpoint_path.name
+    payload = {
+        "status": "ok",
+        "log_head": stdout_head,
+        "error_head": stderr_head,
+        "checkpoint": str(checkpoint_path),
+        "checkpoint_name": checkpoint_path.name,
+    }
     return payload
+    # except json.JSONDecodeError as e:
+    #     raise RuntimeError(
+    #         f"VGAE train returned invalid JSON. "
+    #         f"stdout head: {result.stdout[:500]!r}, stderr head: {result.stderr[:500]!r}"
+    #     ) from e
+
+    # payload["checkpoint"] = str(checkpoint_path)
+    # payload["checkpoint_name"] = checkpoint_path.name
+    # return payload
 
 
 def train_and_generate(
     edges_path: str,
-    n: int,
+    n: Optional[int],          # requested number of nodes; if None, use full dataset size
     threshold: float,
     nodes_path: Optional[str] = None,
     model_name: str = "VGAE",
@@ -110,36 +144,96 @@ def train_and_generate(
     seed: Optional[int] = None,
     checkpoint: Optional[str] = None,
 ) -> dict:
+    """
+    Desired behavior:
+      - If checkpoint is provided: use it directly, generate adjacency for the
+        same number of nodes as in nodes_path (or the given n), and attach attributes.
+      - Otherwise: train a fresh VGAE, save checkpoint, then generate and attach attributes.
+    """
+    if nodes_path is None:
+        raise ValueError("nodes_path is required to attach node attributes.")
+
+    # Load node attributes and determine dataset size
+    nodes_df = pd.read_csv(nodes_path).sort_values("node_index").reset_index(drop=True)
+    num_nodes_total = len(nodes_df)
+
+    # If n is None, use full dataset size
+    if n is None:
+        n = num_nodes_total
+
+    if n != num_nodes_total:
+        # You can relax this if you later want subsampling, but then you
+        # must decide how to map generated indices to original nodes.
+        raise ValueError(
+            f"Requested n={n} but source data has {num_nodes_total} nodes. "
+            f"For 1-1 attribute pairing, n must equal number of nodes in source data."
+        )
+
+    # CASE 1: Use an existing checkpoint
     if checkpoint:
-        generated = generate(checkpoint=checkpoint, n=n, t=threshold, seed=seed)
-        generated.setdefault("metadata", {})
-        generated["metadata"]["checkpoint"] = checkpoint
-        generated["metadata"]["trained"] = False
-        return generated
+        # generated_raw = generate(checkpoint=checkpoint, n=n, t=threshold, seed=seed)
+        generated_raw = generate(
+            checkpoint=checkpoint,
+            n=n,
+            t=threshold,
+            seed=seed,
+            edges_path=edges_path,
+            nodes_path=nodes_path,
+        )
+        trained_flag = False
+        training_result = None
+        checkpoint_name = Path(checkpoint).name
+    else:
+        # CASE 2: Train a new VGAE
+        training_result = train_vgae(
+            edges_path=edges_path,
+            nodes_path=nodes_path,
+            model_name=model_name,
+            epochs=epochs,
+            hidden1=hidden1,
+            hidden2=hidden2,
+            lr=lr,
+            seed=seed,
+        )
+        checkpoint = training_result["checkpoint"]
+        checkpoint_name = training_result["checkpoint_name"]
+        generated_raw = generate(
+            checkpoint=checkpoint,
+            n=n,
+            t=threshold,
+            seed=seed,
+            edges_path=edges_path,
+            nodes_path=nodes_path,
+        )
+        trained_flag = True
 
-    training_result = train_vgae(
-        edges_path=edges_path,
-        nodes_path=nodes_path,
-        model_name=model_name,
-        epochs=epochs,
-        hidden1=hidden1,
-        hidden2=hidden2,
-        lr=lr,
-        seed=seed,
-    )
+    # Attach attributes to generated nodes
+    nodes_out = []
+    for i in range(n):
+        row = nodes_df.iloc[i]
+        nodes_out.append({
+            "id":           int(i),
+            "node_index":   int(row["node_index"]),
+            "node_id":      str(row["node_id"]),      # cast to str to be safe
+            "node_type":    str(row["node_type"]),
+            "node_name":    str(row["node_name"]),
+            "node_source":  str(row["node_source"]),
+        })
 
-    generated = generate(
-        checkpoint=training_result["checkpoint"],
-        n=n,
-        t=threshold,
-        seed=seed,
-    )
+    edges_out = generated_raw.get("edges", [])
 
-    generated.setdefault("metadata", {})
-    generated["metadata"]["checkpoint"] = training_result["checkpoint_name"]
-    generated["metadata"]["training"] = training_result
-    generated["metadata"]["trained"] = True
-    return generated
+    metadata = generated_raw.get("metadata", {})
+    metadata["checkpoint"] = checkpoint_name
+    metadata["trained"] = trained_flag
+    if training_result is not None:
+        metadata["training"] = training_result
+
+    result = {
+        "nodes":    nodes_out,
+        "edges":    edges_out,
+        "metadata": metadata,
+    }
+    return result
 
 
 def list_checkpoints() -> list[dict]:
@@ -153,13 +247,14 @@ def list_checkpoints() -> list[dict]:
         for f in files
     ]
 
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Train and generate using VGAE.")
     parser.add_argument("--edges_path", required=True, help="Path to the edges CSV file.")
-    parser.add_argument("--nodes_path", help="Path to the nodes CSV file (optional).")
-    parser.add_argument("--n", type=int, required=True, help="Number of nodes to generate.")
+    parser.add_argument("--nodes_path", required=True, help="Path to the nodes CSV file.")
+    parser.add_argument("--n", type=int, help="Number of nodes to generate (default: full dataset).")
     parser.add_argument("--threshold", type=float, required=True, help="Threshold for edge generation.")
     parser.add_argument("--model_name", default="VGAE", help="Model name (default: VGAE).")
     parser.add_argument("--epochs", type=int, default=200, help="Number of training epochs (default: 200).")
@@ -186,5 +281,3 @@ if __name__ == "__main__":
     )
 
     print(json.dumps(result, indent=4))
-
-    # python VGAE_endpoint.py --edges_path /home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges.csv --nodes_path  /home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv --n 30 --threshold 0.5 --model_name VGAE --epochs 2 --hidden1 32 --hidden2 16 --lr .01 --seed 42 

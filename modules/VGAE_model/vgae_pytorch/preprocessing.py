@@ -76,14 +76,19 @@ def mask_test_edges(adj):
         idx_j = np.random.randint(0, adj.shape[0])
         if idx_i == idx_j:
             continue
-        if ismember([idx_i, idx_j], train_edges):
+        if ismember([idx_i, idx_j], edges_all):
             continue
-        if ismember([idx_j, idx_i], train_edges):
+
+        if ismember([idx_j, idx_i], edges_all):
             continue
-        if ismember([idx_i, idx_j], val_edges):
-            continue
-        if ismember([idx_j, idx_i], val_edges):
-            continue
+        # if ismember([idx_i, idx_j], train_edges):
+        #     continue
+        # if ismember([idx_j, idx_i], train_edges):
+        #     continue
+        # if ismember([idx_i, idx_j], val_edges):
+        #     continue
+        # if ismember([idx_j, idx_i], val_edges):
+        #     continue
         if val_edges_false:
             if ismember([idx_j, idx_i], np.array(val_edges_false)):
                 continue

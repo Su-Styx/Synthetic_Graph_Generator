@@ -21,6 +21,7 @@ import os
 # Train on CPU (hide GPU) due to memory constraints
 os.environ['CUDA_VISIBLE_DEVICES'] = ""
 print('file running')
+save_path = "vgae_checkpoint3.pt"
 
 def parse_cli():
     p = argparse.ArgumentParser()
@@ -72,7 +73,13 @@ adj_norm = preprocess_graph(adj)
 
 num_nodes = adj.shape[0]
 
-features = sparse_to_tuple(features.tocoo())
+# features = sparse_to_tuple(features.tocoo())
+if sp.issparse(features):
+    features = sparse_to_tuple(features.tocoo())
+else:
+    features = sparse_to_tuple(
+        sp.csr_matrix(features, dtype=np.float32).tocoo()
+    )
 num_features = features[2][1]
 features_nonzero = features[1].shape[0]
 
@@ -157,6 +164,11 @@ def get_acc(adj_rec, adj_label_dense):
     accuracy = (preds_all == labels_all).sum().float() / labels_all.size(0)
     return accuracy
 
+
+best_val_ap = -float("inf")
+best_epoch = 0
+epochs_without_improvement = 0
+patience = 300
 # train model
 for epoch in range(args.num_epoch):
     print('epoch', epoch)
@@ -179,6 +191,42 @@ for epoch in range(args.num_epoch):
           "train_acc=", "{:.5f}".format(train_acc), "val_roc=", "{:.5f}".format(val_roc),
           "val_ap=", "{:.5f}".format(val_ap),
           "time=", "{:.5f}".format(time.time() - t))
+    
+    
+    if val_ap > best_val_ap + 0.001:
+        best_val_ap = val_ap
+        best_epoch = epoch + 1
+        epochs_without_improvement = 0
+
+        torch.save({
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "dataset": args.dataset,
+            "model_name": args.model,
+            "epoch": epoch + 1,
+            "input_dim": args.input_dim,
+            "hidden1_dim": args.hidden1_dim,
+            "hidden2_dim": args.hidden2_dim,
+            "num_nodes": num_nodes,
+            "num_features": num_features,
+            "best_val_ap": best_val_ap,
+        }, save_path)
+
+        print(
+            f"Saved best checkpoint: epoch={best_epoch}, "
+            f"val_ap={best_val_ap:.5f}",
+            flush=True,
+        )
+    else:
+        epochs_without_improvement += 1
+
+    if epochs_without_improvement >= patience:
+        print(
+            f"Early stopping at epoch {epoch + 1}; "
+            f"best epoch={best_epoch}, best val_ap={best_val_ap:.5f}",
+            flush=True,
+        )
+        break
 
 
 test_roc, test_ap = get_scores(test_edges, test_edges_false, A_pred)
@@ -214,3 +262,5 @@ torch.save({
 }, save_path)
 
 print(f"Weights saved to {save_path}")
+
+# MAC CALL: ╰─ python3 train.py --edges_path /Users/nicholas/Desktop/MSC_Works/DISSERTATION/Synthetic_Graph_Generator/Synthetic_Graph_Generator/Data/Dataverse/edges.csv --nodes_path /Users/nicholas/Desktop/MSC_Works/DISSERTATION/Synthetic_Graph_Generator/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv --dataset disease_features --model VGAE --epochs 2 --hidden1 32 --hidden2 16 --lr 0.0101 --checkpoint_out vgae_checkpoint2.pt --seed 42
