@@ -53,6 +53,13 @@ def health(request):
 from rest_framework import generics, permissions
 from .serializers import UserSignupSerializer
 
+from rest_framework import viewsets
+from rest_framework.response import Response
+
+from .models import Run
+from .serializers import RunSerializer
+
+
 class RunViewSet(viewsets.ModelViewSet):
     queryset = Run.objects.all().order_by('-created_at')
     serializer_class = RunSerializer
@@ -62,11 +69,21 @@ class RunViewSet(viewsets.ModelViewSet):
         run = serializer.save(status="pending")
         transaction.on_commit(lambda: execute_run.delay(run.id))
 
-    
     def get_queryset(self):
         user = self.request.user
         return Run.objects.filter(created_by=user)
 
+    def list(self, request, *args, **kwargs):
+        """
+        GET /runs/ -> return all fields except `result`
+        (used by dashboard)
+        """
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        data = serializer.data
+        for item in data:
+            item.pop("result", None)
+        return Response(data)
 
 
 class SignupView(generics.CreateAPIView):
