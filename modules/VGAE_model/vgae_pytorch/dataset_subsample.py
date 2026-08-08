@@ -1,10 +1,10 @@
 import pandas as pd
 import networkx as nx
 
-edges = pd.read_csv("/Users/nicholas/Desktop/MSC_Works/DISSERTATION/Synthetic_Graph_Generator/Synthetic_Graph_Generator/Data/Dataverse/edges.csv")
-nodes = pd.read_csv("/Users/nicholas/Desktop/MSC_Works/DISSERTATION/Synthetic_Graph_Generator/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv")
+edges = pd.read_csv("/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges.csv")
+nodes = pd.read_csv("/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes.csv")
 
-selected_nodes = set(nodes["node_index"].head(200))
+selected_nodes = set(nodes["node_index"].head(3000))
 # 3500 nodes and 200 epochs provide:
 # test_roc= 0.78136 test_ap= 0.78987
 
@@ -32,5 +32,5 @@ filtered_nodes = nodes[
     nodes["node_index"].isin(used_nodes)
 ].copy()
 
-filtered_edges.to_csv("/Users/nicholas/Desktop/MSC_Works/DISSERTATION/Synthetic_Graph_Generator/Synthetic_Graph_Generator/Data/Dataverse/edges_200.csv", index=False)
-filtered_nodes.to_csv("/Users/nicholas/Desktop/MSC_Works/DISSERTATION/Synthetic_Graph_Generator/Synthetic_Graph_Generator/Data/Dataverse/nodes_200.csv", index=False)
+filtered_edges.to_csv("/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges_3000.csv", index=False)
+filtered_nodes.to_csv("/home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes_3000.csv", index=False)

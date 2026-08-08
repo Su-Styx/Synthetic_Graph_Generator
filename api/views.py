@@ -223,3 +223,58 @@ class QuickViewUploadView(APIView):
     def _parse_mtx(self, uploaded_file):
         matrix = mmread(uploaded_file)
         return nx.from_scipy_sparse_array(matrix)
+
+
+def vgae_generate_view(request):
+    """
+    Expects multipart/form-data with:
+      - edges_file: CSV of edges
+      - nodes_file: CSV of nodes
+      - threshold, epochs, hidden1, hidden2, lr, seed, n (optional) as form fields
+    """
+
+    edges_file = request.FILES["edges_file"]
+    nodes_file = request.FILES["nodes_file"]
+
+    # Save uploads to disk (e.g. under MEDIA_ROOT)
+    edges_path = default_storage.save(
+        os.path.join("uploads", edges_file.name),
+        ContentFile(edges_file.read()),
+    )
+    nodes_path = default_storage.save(
+        os.path.join("uploads", nodes_file.name),
+        ContentFile(nodes_file.read()),
+    )
+
+    # Build absolute paths if your endpoint expects them
+    edges_abs = default_storage.path(edges_path)
+    nodes_abs = default_storage.path(nodes_path)
+
+    # Parse numeric parameters with defaults
+    threshold = float(request.POST.get("threshold", 0.5))
+    epochs    = int(request.POST.get("epochs", 200))
+    hidden1   = int(request.POST.get("hidden1", 32))
+    hidden2   = int(request.POST.get("hidden2", 16))
+    lr        = float(request.POST.get("lr", 0.01))
+    seed      = request.POST.get("seed")
+    n         = request.POST.get("n")
+    n         = int(n) if n is not None else None
+
+    params = {
+        "filepath": edges_abs,
+        "nodes_filepath": nodes_abs,
+        "threshold": threshold,
+        "epochs": epochs,
+        "hidden1": hidden1,
+        "hidden2": hidden2,
+        "lr": lr,
+        "seed": int(seed) if seed is not None else None,
+        "n": n,
+        "model_name": "VGAE",
+        "checkpoint": None,
+    }
+
+    result = generate_VGAE(params)  # calls your endpoint logic
+
+    return JsonResponse(result, safe=False)
+

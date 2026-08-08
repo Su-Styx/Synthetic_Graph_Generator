@@ -247,6 +247,37 @@ def list_checkpoints() -> list[dict]:
         for f in files
     ]
 
+def generate_VGAE_graph(
+    *,
+    edges_path: str,
+    nodes_path: str,
+    n: int | None,
+    threshold: float,
+    model_name: str = "VGAE",
+    epochs: int = 200,
+    hidden1: int = 32,
+    hidden2: int = 16,
+    lr: float = 0.01,
+    seed: int | None = None,
+    checkpoint: str | None = None,
+) -> dict:
+    """
+    Programmatic API equivalent of calling the CLI, returning the same JSON
+    structure that the script prints.
+    """
+    return train_and_generate(
+        edges_path=edges_path,
+        nodes_path=nodes_path,
+        n=n,
+        threshold=threshold,
+        model_name=model_name,
+        epochs=epochs,
+        hidden1=hidden1,
+        hidden2=hidden2,
+        lr=lr,
+        seed=seed,
+        checkpoint=checkpoint,
+    )
 
 if __name__ == "__main__":
     import argparse

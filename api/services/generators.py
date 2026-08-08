@@ -92,16 +92,21 @@ def generate_ERGM(params: dict) -> dict:
     seed = params.get("seed")
     return generate_ERGM_graph(file_path, seed)
 
+# generators.py
+
+# from .VGAE_endpoint import generate_VGAE_graph  # adjust import path as needed
+
 def generate_VGAE(params: dict) -> dict:
     return generate_VGAE_graph(
-        edges_path=params["filepath"],
-        nodes_path=params.get("nodes_filepath"),
-        n=params["n"],
+        edges_path=params["filepath"],          # user’s edges CSV on disk
+        nodes_path=params["nodes_filepath"],    # user’s nodes CSV on disk
+        n=params.get("n"),                      # or None for full size
         threshold=params["threshold"],
-        seed=params.get("seed"),
+        model_name=params.get("model_name", "VGAE"),
         epochs=params.get("epochs", 200),
         hidden1=params.get("hidden1", 32),
         hidden2=params.get("hidden2", 16),
         lr=params.get("lr", 0.01),
+        seed=params.get("seed"),
         checkpoint=params.get("checkpoint"),
     )
