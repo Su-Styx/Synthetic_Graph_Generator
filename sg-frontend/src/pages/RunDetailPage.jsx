@@ -1,4 +1,3 @@
-// src/pages/RunDetailPage.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ForceGraph2D from "react-force-graph-2d";
@@ -10,6 +9,7 @@ import "./css/RunDetailPage.css";
 const NODE_CORE_KEYS = new Set(["id", "x", "y", "vx", "vy", "index", "fx", "fy"]);
 const LINK_CORE_KEYS = new Set(["id", "source", "target", "index"]);
 const FORMATS = ["CSV", "Neo4j", "RDF", "JSON"];
+const MAX_DISPLAY_NODES = 1500;
 
 export default function RunDetailPage() {
   const { id } = useParams();
@@ -25,7 +25,7 @@ export default function RunDetailPage() {
     let intervalId;
     async function fetchRun() {
       try {
-        const data = await getRun(id);
+        const data = await getRun(id); // make sure this returns `result`
         setRun(data);
         setError("");
         setLoading(false);
@@ -40,10 +40,34 @@ export default function RunDetailPage() {
     return () => clearInterval(intervalId);
   }, [id]);
 
-  const graphData = useMemo(() => buildGraphData(run?.result), [run]);
-  const metrics = useMemo(() => computeMetrics(graphData), [graphData]);
-  const nodeKeys = useMemo(() => extraKeys(graphData?.nodes, NODE_CORE_KEYS), [graphData]);
-  const linkKeys = useMemo(() => extraKeys(graphData?.links, LINK_CORE_KEYS), [graphData]);
+  const graphData = useMemo(() => {
+    const result = run?.result;
+    if (!result) return null;
+
+    const nNodes =
+      result.metadata?.n_nodes ??
+      (Array.isArray(result.nodes) ? result.nodes.length : 0);
+
+    if (nNodes > MAX_DISPLAY_NODES) {
+      return null;
+    }
+
+    return buildGraphData(result);
+  }, [run]);
+
+  const metrics = useMemo(() => {
+    if (!graphData) return null;
+    return computeMetrics(graphData);
+  }, [graphData]);
+
+  const nodeKeys = useMemo(
+    () => extraKeys(graphData?.nodes, NODE_CORE_KEYS),
+    [graphData]
+  );
+  const linkKeys = useMemo(
+    () => extraKeys(graphData?.links, LINK_CORE_KEYS),
+    [graphData]
+  );
 
   if (loading) return <Centered>Loading run…</Centered>;
   if (error) return <Centered color="#ff8b8b">{error}</Centered>;
@@ -65,8 +89,13 @@ export default function RunDetailPage() {
             </div>
           </div>
           <div className="run-actions">
-            <button className="btn btn-neutral" onClick={() => setShowModal(true)}>⬇ Download</button>
-            <button className="btn btn-accent" onClick={() => navigate("/workload-query", { state: { runId: run.id } })}>
+            <button className="btn btn-neutral" onClick={() => setShowModal(true)}>
+              ⬇ Download
+            </button>
+            <button
+              className="btn btn-accent"
+              onClick={() => navigate("/workload-query", { state: { runId: run.id } })}
+            >
               Workload Query Suite
             </button>
           </div>
@@ -80,7 +109,16 @@ export default function RunDetailPage() {
                 <Toggle checked={showGraph} onChange={() => setShowGraph((v) => !v)} />
               </div>
               {showGraph ? (
-                graphData ? <GraphView data={graphData} /> : <Empty>No graph visual available for this run result.</Empty>
+                graphData ? (
+                  <GraphView data={graphData} />
+                ) : run?.result ? (
+                  <Empty>
+                    Graph is too large to display interactively in the browser
+                    (over {MAX_DISPLAY_NODES} nodes). Use the download options to inspect it.
+                  </Empty>
+                ) : (
+                  <Empty>No graph visual available for this run result.</Empty>
+                )
               ) : (
                 <Empty>Graph display is hidden. Toggle it back on above.</Empty>
               )}
@@ -88,17 +126,25 @@ export default function RunDetailPage() {
 
             {(nodeKeys.length > 0 || linkKeys.length > 0) && (
               <section className="panel">
-                <div className="panel-header"><h3 className="panel-title">Node &amp; Link Attributes</h3></div>
+                <div className="panel-header">
+                  <h3 className="panel-title">Node &amp; Link Attributes</h3>
+                </div>
                 <div className="attr-grid">
-                  {nodeKeys.length > 0 && <AttrList label="Node attributes" keys={nodeKeys} />}
-                  {linkKeys.length > 0 && <AttrList label="Link attributes" keys={linkKeys} />}
+                  {nodeKeys.length > 0 && (
+                    <AttrList label="Node attributes" keys={nodeKeys} />
+                  )}
+                  {linkKeys.length > 0 && (
+                    <AttrList label="Link attributes" keys={linkKeys} />
+                  )}
                 </div>
               </section>
             )}
 
             {run.error_message && (
               <section className="panel accent">
-                <div className="panel-header"><h3 className="panel-title error">Error</h3></div>
+                <div className="panel-header">
+                  <h3 className="panel-title error">Error</h3>
+                </div>
                 <pre className="code-block error">{run.error_message}</pre>
               </section>
             )}
@@ -106,7 +152,9 @@ export default function RunDetailPage() {
 
           <div className="run-col">
             <section className="panel">
-              <div className="panel-header"><h3 className="panel-title">Graph Metrics</h3></div>
+              <div className="panel-header">
+                <h3 className="panel-title">Graph Metrics</h3>
+              </div>
               {metrics ? (
                 <div className="metric-list">
                   <Metric label="Nodes" value={metrics.nodeCount} />
@@ -114,7 +162,10 @@ export default function RunDetailPage() {
                   <Metric label="Average degree" value={metrics.avgDegree} />
                   <Metric label="Max degree" value={metrics.maxDegree} />
                   <Metric label="Density" value={metrics.density} />
-                  <Metric label="Avg. clustering coefficient" value={metrics.avgClustering} />
+                  <Metric
+                    label="Avg. clustering coefficient"
+                    value={metrics.avgClustering}
+                  />
                 </div>
               ) : (
                 <Empty>Metrics unavailable until the graph is computed.</Empty>
@@ -122,8 +173,12 @@ export default function RunDetailPage() {
             </section>
 
             <section className="panel">
-              <div className="panel-header"><h3 className="panel-title">Parameters</h3></div>
-              <pre className="code-block params">{JSON.stringify(run.params ?? {}, null, 2)}</pre>
+              <div className="panel-header">
+                <h3 className="panel-title">Parameters</h3>
+              </div>
+              <pre className="code-block params">
+                {JSON.stringify(run.params ?? {}, null, 2)}
+              </pre>
             </section>
           </div>
         </div>
