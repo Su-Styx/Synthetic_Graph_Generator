@@ -4,6 +4,7 @@ from .views import QuickViewUploadView, SignupView
 from .views import RunViewSet, health
 from .views import WorkloadQueryView
 from .views import FileUploadView
+from .views import download_run_graph
 
 router = DefaultRouter()
 router.register(r'runs', RunViewSet, basename='run')
@@ -15,5 +16,6 @@ urlpatterns = [
     path("workload-query/", WorkloadQueryView.as_view(), name="workload-query"),
     path("quick-view/", QuickViewUploadView.as_view(), name="quick-view-upload"),
     path("upload/", FileUploadView.as_view(), name="file-upload"),
+    path("runs/<int:pk>/download/", download_run_graph, name="download_run_graph"),
 
     ]

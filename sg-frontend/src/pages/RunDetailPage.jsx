@@ -5,7 +5,9 @@ import { getRun } from "../api/runs";
 import { buildGraphData, computeMetrics, extraKeys } from "../utils/graphMetrics";
 import bgImage from "../assets/bcg.png";
 import "./css/RunDetailPage.css";
+// import { API_BASE_URL } from "../api/client";
 
+// const API_BASE_URL = "http://127.0.0.1:8000/api";
 const NODE_CORE_KEYS = new Set(["id", "x", "y", "vx", "vy", "index", "fx", "fy"]);
 const LINK_CORE_KEYS = new Set(["id", "source", "target", "index"]);
 const FORMATS = ["CSV", "Neo4j", "RDF", "JSON"];
@@ -184,7 +186,12 @@ export default function RunDetailPage() {
         </div>
       </div>
 
-      {showModal && <DownloadModal onClose={() => setShowModal(false)} />}
+      {showModal && (
+  <DownloadModal
+    runId={run.id}
+    onClose={() => setShowModal(false)}
+  />
+)}
     </div>
   );
 }
@@ -243,7 +250,18 @@ function GraphView({ data }) {
   );
 }
 
-function DownloadModal({ onClose }) {
+const API_BASE_URL = "http://127.0.0.1:8000/api";
+
+function DownloadModal({ runId, onClose }) {
+  const handleDownload = (format) => {
+    const url =
+      `${API_BASE_URL}/runs/${runId}/download/` +
+      `?format=${encodeURIComponent(format)}`;
+
+    console.log("DOWNLOAD URL:", url);
+    window.location.href = url;
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -252,7 +270,15 @@ function DownloadModal({ onClose }) {
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
         <div className="format-grid">
-          {FORMATS.map((f) => <button key={f} className="format-btn">{f}</button>)}
+          {FORMATS.map((f) => (
+            <button
+              key={f}
+              className="format-btn"
+              onClick={() => handleDownload(f)}
+            >
+              {f}
+            </button>
+          ))}
         </div>
       </div>
     </div>

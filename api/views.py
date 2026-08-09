@@ -295,3 +295,56 @@ def vgae_generate_view(request):
 
     return JsonResponse(result, safe=False)
 
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
+import tempfile
+import shutil
+
+from export_layer.schema_func import (
+    json_export,
+    csv_export,
+    neo4j_export,
+    rdf_export,
+    turtle_export,
+)
+
+def download_run_graph(request, pk: int):
+    fmt = request.GET.get("format", "JSON").upper()
+
+    # IMPORTANT: drop created_by filter here
+    run = get_object_or_404(Run, pk=pk)
+
+    graph = run.result
+    if not graph:
+        raise Http404("Run has no result to export")
+
+    tmp_dir = Path(tempfile.mkdtemp(prefix="run_export_"))
+
+    if fmt == "JSON":
+        out_path = tmp_dir / f"run_{pk}.json"
+        json_export(graph, str(out_path))
+
+    elif fmt == "CSV":
+        out_dir = tmp_dir / "csv"
+        csv_export(graph, str(out_dir))
+        zip_base = tmp_dir / f"run_{pk}_csv"
+        shutil.make_archive(str(zip_base), "zip", out_dir)
+        out_path = zip_base.with_suffix(".zip")
+
+    elif fmt == "NEO4J":
+        out_dir = tmp_dir / "neo4j"
+        neo4j_export(graph, str(out_dir))
+        zip_base = tmp_dir / f"run_{pk}_neo4j"
+        shutil.make_archive(str(zip_base), "zip", out_dir)
+        out_path = zip_base.with_suffix(".zip")
+
+    elif fmt == "RDF":
+        out_path = tmp_dir / f"run_{pk}.rdf"
+        rdf_export(graph, str(out_path))
+
+    else:
+        out_path = tmp_dir / f"run_{pk}.json"
+        json_export(graph, str(out_path))
+
+    fh = open(out_path, "rb")
+    return FileResponse(fh, as_attachment=True, filename=out_path.name)
