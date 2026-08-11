@@ -1,7 +1,7 @@
 # from django.shortcuts import render
 
 # Create your views here.
-from api.serializers import RunSerializer
+from api.serializers import RunSerializer, GenModelSerializer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import viewsets
@@ -9,7 +9,7 @@ from django.db import transaction
 from .tasks import execute_run
 from rest_framework.views import APIView 
 from rest_framework import status
-from .models import Run
+from .models import Run, GenModel
 from .services.metrics import compute_all_metrics
 from .services.query_engine import run_generic_queries, run_custom_query
 
@@ -59,7 +59,6 @@ from rest_framework.response import Response
 from .models import Run
 from .serializers import RunSerializer
 
-
 class RunViewSet(viewsets.ModelViewSet):
     queryset = Run.objects.all().order_by('-created_at')
     serializer_class = RunSerializer
@@ -75,8 +74,7 @@ class RunViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """
-        GET /runs/ -> return all fields except `result`
-        (used by dashboard)
+        GET /runs/ -> return all fields except `result` (used by dashboard)
         """
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
@@ -85,10 +83,118 @@ class RunViewSet(viewsets.ModelViewSet):
             item.pop("result", None)
         return Response(data)
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = serializer.data
 
+        result = data.get("result")
+        if result and isinstance(result, dict):
+            meta = result.get("metadata") or {}
+            n_nodes = meta.get("n_nodes") or len(result.get("nodes", []))
+
+            print("DEBUG retrieve run", instance.id, "n_nodes", n_nodes)
+
+            if n_nodes > 1500:
+                # Build a tiny stub result for large graphs
+                stripped_meta = {
+                    "model": meta.get("model"),
+                    "n_nodes": n_nodes,
+                    "n_edges": meta.get("n_edges", len(result.get("edges", []))),
+                    "directed": meta.get("directed"),
+                    "parameters": meta.get("parameters"),
+                }
+
+                data["result"] = {
+                    "nodes": [],     # or omit entirely if you prefer
+                    "edges": [],
+                    "metadata": stripped_meta,
+                }
+
+        return Response(data)
+
+    # def retrieve(self, request, *args, **kwargs):
+       
+    #     """
+    #     GET /runs/<id>/ -> full run, but for large graphs strip node attributes
+    #     in the `result` payload.
+    #     """
+    #     instance = self.get_object()
+    #     serializer = self.get_serializer(instance)
+    #     data = serializer.data
+        
+
+    #     result = data.get("result")
+    #     if result and isinstance(result, dict):
+    #         meta = result.get("metadata") or {}
+    #         n_nodes = meta.get("n_nodes")
+    #         print("DEBUG retrieve run", instance.id, "n_nodes", n_nodes)
+    #         if n_nodes is None:
+    #             n_nodes = len(result.get("nodes", []))
+
+    #         if n_nodes and n_nodes > 1500:
+    #             stripped_nodes = [
+    #                 {"id": node.get("id")}
+    #                 for node in result.get("nodes", [])
+    #             ]
+    #             stripped_edges = [
+    #                 {
+    #                     "source": edge.get("source"),
+    #                     "target": edge.get("target"),
+    #                 }
+    #                 for edge in result.get("edges", [])
+    #             ]
+
+    #             stripped_meta = {
+    #                 "model": meta.get("model"),
+    #                 "n_nodes": n_nodes,
+    #                 "n_edges": meta.get("n_edges", len(result.get("edges", []))),
+    #                 "directed": meta.get("directed"),
+    #                 "parameters": meta.get("parameters"),
+    #             }
+
+    #             data["result"] = {
+    #                 "nodes": stripped_nodes,
+    #                 "edges": stripped_edges,
+    #                 "metadata": stripped_meta,
+    #             }
+            
+    #     return Response(data)
 class SignupView(generics.CreateAPIView):
     serializer_class = UserSignupSerializer
     permission_classes = [permissions.AllowAny]
+
+def _sample_graph(result: dict, max_nodes: int = 1500) -> dict:
+    nodes = result.get("nodes", [])
+    edges = result.get("edges", [])
+
+    if len(nodes) <= max_nodes:
+        return result
+
+    # Simple sampling: take first max_nodes by id
+    sampled_ids = {node["id"] for node in nodes[:max_nodes]}
+    sampled_nodes = [node for node in nodes if node["id"] in sampled_ids]
+    sampled_edges = [
+        e for e in edges
+        if e["source"] in sampled_ids and e["target"] in sampled_ids
+    ]
+
+    meta = result.get("metadata") or {}
+    sampled_meta = {
+        **meta,
+        "n_nodes": len(sampled_nodes),
+        "n_edges": len(sampled_edges),
+        "sampled_from_n_nodes": meta.get("n_nodes", len(nodes)),
+        "sampled_from_n_edges": meta.get("n_edges", len(edges)),
+    }
+
+    return {
+        "nodes": sampled_nodes,
+        "edges": sampled_edges,
+        "metadata": sampled_meta,
+    }
+
+
 
 
 
@@ -107,6 +213,8 @@ class WorkloadQueryView(APIView):
         if run.status != "completed" or not run.result:
             return Response({"error": "run has no completed result"}, status=status.HTTP_400_BAD_REQUEST)
 
+        result = run.result  # full graph from DB
+
         source_result = None
         if source_run_id:
             try:
@@ -115,12 +223,12 @@ class WorkloadQueryView(APIView):
             except Run.DoesNotExist:
                 pass
 
-        metrics = compute_all_metrics(run.result, source_result)
-        generic_results = run_generic_queries(run.result)
+        metrics = compute_all_metrics(result, source_result)
+        generic_results = run_generic_queries(result)
 
         custom_result = None
         if query_type:
-            custom_result = run_custom_query(run.result, query_type, query_params)
+            custom_result = run_custom_query(result, query_type, query_params)
 
         return Response({
             "run_id": run.id,
@@ -128,8 +236,6 @@ class WorkloadQueryView(APIView):
             "generic_queries": generic_results,
             "custom_query_result": custom_result,
         })
-
-
 
 
 class FileUploadView(APIView):
@@ -348,3 +454,65 @@ def download_run_graph(request, pk: int):
 
     fh = open(out_path, "rb")
     return FileResponse(fh, as_attachment=True, filename=out_path.name)
+
+
+
+
+from django.db.models import Q, Case, When, Value, IntegerField
+from rest_framework.generics import ListAPIView
+
+
+
+EFFICIENCY_RANK = {"poor": 1, "fair": 2, "good": 3, "great": 4}
+
+
+class GenModelListView(ListAPIView):
+    """
+    GET /api/models/
+    Query params:
+      search    - free text, matches type / efficiency / parameters /
+                  documentation / paper (case-insensitive contains)
+      sort_by   - "type" or "efficiency" (optional)
+      invert    - "true" / "false" (optional, default "false")
+
+    Default ordering when sort_by=efficiency: great -> poor.
+    invert=true reverses it: poor -> great.
+
+    Default ordering when sort_by=type: alphabetical A -> Z.
+    invert=true reverses it: Z -> A.
+    """
+
+    serializer_class = GenModelSerializer
+
+    def get_queryset(self):
+        qs = GenModel.objects.all()
+
+        search = self.request.query_params.get("search", "").strip()
+        sort_by = self.request.query_params.get("sort_by", "").strip()
+        invert = self.request.query_params.get("invert", "false").lower() == "true"
+
+        if search:
+            qs = qs.filter(
+                Q(type__icontains=search)
+                | Q(efficiency__icontains=search)
+                | Q(parameters__icontains=search)
+                | Q(documentation__icontains=search)
+                | Q(paper__icontains=search)
+            )
+
+        if sort_by == "efficiency":
+            whens = [
+                When(efficiency=key, then=Value(rank))
+                for key, rank in EFFICIENCY_RANK.items()
+            ]
+            qs = qs.annotate(
+                efficiency_rank=Case(
+                    *whens, default=Value(0), output_field=IntegerField()
+                )
+            )
+            qs = qs.order_by("efficiency_rank" if invert else "-efficiency_rank")
+
+        elif sort_by == "type":
+            qs = qs.order_by("-type" if invert else "type")
+
+        return qs

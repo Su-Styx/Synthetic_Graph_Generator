@@ -1,6 +1,6 @@
 # control the response of the api endpoint
 from rest_framework import serializers
-from api.models import Run
+from api.models import Run, GenModel
 from django.contrib.auth import get_user_model
 
 
@@ -26,3 +26,19 @@ class UserSignupSerializer(serializers.ModelSerializer):
         user.set_password(password)  # hashes the password
         user.save()
         return user
+
+        from rest_framework import serializers
+
+
+
+class GenModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GenModel
+        fields = [
+            "id",
+            "type",
+            "efficiency",
+            "parameters",
+            "documentation",
+            "paper",
+        ]

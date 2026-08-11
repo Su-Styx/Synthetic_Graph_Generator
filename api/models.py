@@ -1,7 +1,7 @@
 # from cairo import Status
 from django.db import models
 from django.conf import settings
-
+import uuid
 
 class Run(models.Model):
     class Status(models.TextChoices):
@@ -50,4 +50,27 @@ class Run(models.Model):
         return f"{self.name} ({self.status})"
 
 
+class GenModel(models.Model):
+    EFFICIENCY_CHOICES = [
+        ("poor", "Poor"),
+        ("fair", "Fair"),
+        ("good", "Good"),
+        ("great", "Great"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    type = models.CharField(max_length=255)
+    efficiency = models.CharField(
+        max_length=10, choices=EFFICIENCY_CHOICES, default="fair"
+    )
+    parameters = models.TextField(blank=True, default="")
+    documentation = models.TextField(blank=True, default="")
+    paper = models.TextField(blank=True, default="")
+
+    class Meta:
+        verbose_name = "Generation Model"
+        verbose_name_plural = "Generation Models"
+
+    def __str__(self):
+        return f"{self.type} ({self.get_efficiency_display()})"
 # Create your models here.

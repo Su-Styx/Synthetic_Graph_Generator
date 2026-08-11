@@ -12,6 +12,8 @@ import AboutPage from "./pages/AboutPage";
 import DashboardPage from "./pages/DashboardPage";
 import WorkloadQueryPage from "./pages/WorkloadQueryPage";
 import QuickViewPage from "./pages/QuickViewPage";
+import InstructionsPage from "./pages/InstructionsPage";
+import ModelListPage from "./pages/ModelListPage";
 
 
 export default function App() {
@@ -226,6 +228,8 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/workload-query" element={<WorkloadQueryPage />} />
         <Route path="/quick-view" element={<QuickViewPage />} />
+        <Route path="/instructionsPage" element={<InstructionsPage/>} />
+        <Route path="/models" element={<ModelListPage />} />
       </Routes>
     </div>
   );

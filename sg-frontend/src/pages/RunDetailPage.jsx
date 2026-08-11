@@ -11,7 +11,7 @@ import "./css/RunDetailPage.css";
 const NODE_CORE_KEYS = new Set(["id", "x", "y", "vx", "vy", "index", "fx", "fy"]);
 const LINK_CORE_KEYS = new Set(["id", "source", "target", "index"]);
 const FORMATS = ["CSV", "Neo4j", "RDF", "JSON"];
-const MAX_DISPLAY_NODES = 1500;
+const MAX_DISPLAY_NODES = 9999;
 
 export default function RunDetailPage() {
   const { id } = useParams();
@@ -110,14 +110,14 @@ export default function RunDetailPage() {
                 <h3 className="panel-title">Graph Visual</h3>
                 <Toggle checked={showGraph} onChange={() => setShowGraph((v) => !v)} />
               </div>
-              {showGraph ? (
+              {run?.result && run.result.metadata?.n_nodes > 1500 ? (
+                <Empty>
+                  Graph is too large to display interactively
+                  (over {MAX_DISPLAY_NODES} nodes). Use the download options to inspect it.
+                </Empty>
+              ) : showGraph ? (
                 graphData ? (
                   <GraphView data={graphData} />
-                ) : run?.result ? (
-                  <Empty>
-                    Graph is too large to display interactively in the browser
-                    (over {MAX_DISPLAY_NODES} nodes). Use the download options to inspect it.
-                  </Empty>
                 ) : (
                   <Empty>No graph visual available for this run result.</Empty>
                 )
