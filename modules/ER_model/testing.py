@@ -4,7 +4,7 @@ import json
 import subprocess
 seed_list=[]
 
-n_vals={100:.2,1000:.4, 5000:.6}
+n_vals={100:.3,1000:.4, 5000:.6}
 # n_values=[100,1000,5000]
 for i in range(0,15):
     seed_list.append(i)

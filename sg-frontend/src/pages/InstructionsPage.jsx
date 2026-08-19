@@ -54,7 +54,7 @@ const SectionBody = ({ children, style }) => (
 export default function UsageInstructionsPage() {
   const navigate = useNavigate();
   const [showFullInstructions, setShowFullInstructions] = useState(false);
-  const bullettedlist=['Identify objective ','Select best model ','Identify parameters/ pre-requisites ','Navigate to CreateRunPage','Enter parameters/ details ','Wait for model to generate ',' Click on run from dashboard list ','Select a name','Verify the graph fulfills your criteria through Workload Query Suite','return to RunDetailsPage and download the right export format for you ','Done! :)',]
+  const bullettedlist=['Think about what you’re trying to achieve!','Select the model that best fits your needs and data characteristics','Identify the parameters you need for running the model and/or any files','Navigate to CreateRunPage','Enter parameters/ details  ','Wait for model to generate ',' Click on run from dashboard list ','Select a name','Verify the graph meets your needs through Workload Query Suite','Return to RunDetailsPage and download the right export format for you ','Done :)',]
 
   return (
     <>
@@ -328,15 +328,65 @@ export default function UsageInstructionsPage() {
 
                   <SectionHeading>Generating attributes</SectionHeading>
                   <SectionBody style={{color: "#111827b9"}} >
-                    If you need nodes to represent users, categories or… cats? Whilst edges represent
-                     friendships, connections, etc…, Toggle the Node and Edge Attributes option at the
-                      bottom of the CreateRun page, which allows for assigning the probabilities of 
-                      different categorical attributes for both Nodes and Edges to be applied to a new, generated graph. 
+
+                    This section covers the two distinct types of node and edge attribute generation  
+
+                    <h4>Node Type & Edge Relationships</h4>
+
+                    The entries for node and edge relationships simply describes the label each item will recieve. For example, if the word ‘Student’ is written into the text box, nodes will display as Student 1, Student 2, etc… For Edges, the same concept applies, writing ‘Friends with’ into the text-box will result in the edge having a type of ‘Friends with’.
+                    
+                    
+                    <h4> Node & Edge Attributes</h4>
+                    This option is more advanced and is accessed by toggling a button beneath the Edge Relationships text box in the CreateRun page. 
+
+                    Adding a Node attribute allows for the assignment of Categorical, Numeric or Timestamps to a Node’s attributes. For example, selecting the Categorical option and entering ‘Job’ in the first text box, then ‘Fireman’ in the second and leaving the last empty, will create a new attribute for every node, that is of category ‘Job’ and the value for all users is set to ‘Fireman’. The same applies for edges. 
+
+                    Additionally, if you wish to assign one of a list of job titles for each node, such as 10% being Firemen, 30 % being Police, 40% being Teachers and 20% being Doctors, you can set the first box to ‘Job’, the second box to ‘Fireman,Police,Teacher,Doctor’ and the last to 0.1,0.3,0.4,0.2. This will result in the stochastic assignment of Job titles to nodes randomly.
                   </SectionBody>
 
                   <SectionHeading>Export Formats</SectionHeading>
                   <SectionBody style={{color: "#111827b9"}} >
-                    Useful Export Format info goes here
+                    <h4>CSV</h4>
+                    The CSV format is a simple, widely supported format that can be opened in most tabular
+                    software such as Microsoft Excel. Many Python and R libraries support CSV such as
+                    NetworkX and pandas, enabling easy data analysis, processing, and utility of the CSV
+                    file. CSV files are valuable for users who want easy, flexible data, without the need for
+                    a graph database or specialist processing tools.
+
+                    {/* <nl></nl> */}
+
+                    <h4> JSON</h4>
+                    The JSON format is highly prevalent across the web-development domain, for its
+                    simplicity in structural representation of its contents. More specifically, it is easy and
+                    efficient to parse, whilst preserving any number of attributes for objects represented.
+                    JSON allows for easy integration and exchange across web APIs and processing through
+                    front-end or back-end applications. JavaScript tooling, REST APIs and many graph-
+                    visualisation libraries support JSON natively. In practice, the highly structured format
+                    of JSON and powerful inter-operability across web-technologies allows for potential
+                    user-automation of processing tasks without the need of manual format conversion.
+
+                    <h4>Neo4j</h4>
+                    The Neo4j database format stores string representations of nodes, relationships and
+                    properties in place of a table/tabular representation. Neo4j allows for a more efficient
+                    way of storing and querying relationships. Unlike a traditional relational database,
+                    Neo4j does not use JOIN queries, relationships are stored alongside the nodes. In
+                    practice, this is valuable when analysing data to discover deeply-rooted relationships
+                    between different nodes or unforseen connections between distant items through Cypher
+                    queries. Exporting a graph in the Neo4j format ensures the graph is ready to use in a
+                    property-graph database environment without the need for manual conversion methods,
+                    a complex task for non-professional users. Dedicated graph databases are generally
+                    better suited to large, real-world graphs than traditional, relational databases.
+
+                    <h4> RDF</h4>
+                    The Resource Description Framework (RDF) represents data as subject, predicate,
+                    object triples. RDF offers value in its support for semantic-web and knowled-graph use
+                    cases, which greatly beenfit from its formal structure and relationship declaration. This
+                    particular schema allows for greater expressiveness in terms of complex relationships
+                    between different objects. RDF is part of a greater W3C ecosystem, which allows for
+                    seamless integration of generated graphs into frameworks such as OWL for ontoloties
+                    and SPARQL for querying (graphwise). Unlike other export formats, RDF is uniquely
+                    well-suited for enabling semantic web-interoperability and graph analysis in supported
+                    workflows.
                   </SectionBody>
                 </div>
               </Panel>
