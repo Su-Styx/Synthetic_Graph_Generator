@@ -27,15 +27,26 @@ async function refreshAccessToken() {
 export async function authFetch(url, options = {}) {
   let accessToken = localStorage.getItem("accessToken");
 
-  const makeRequest = (token) =>
-    fetch(url, {
+  const makeRequest = (token) => {
+    const headers = {
+      ...(options.headers || {}),
+    };
+
+    // Always add Authorization if we have a token
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Only set Content-Type: application/json if body is NOT FormData
+    if (!(options.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    return fetch(url, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers,
     });
+  };
 
   // First attempt with current access token
   let res = await makeRequest(accessToken);
@@ -46,10 +57,8 @@ export async function authFetch(url, options = {}) {
       const newToken = await refreshAccessToken();
       res = await makeRequest(newToken);
     } catch (err) {
-      // Optional: clear tokens and redirect to login
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
-      // window.location.href = "/login";
       return res;
     }
   }

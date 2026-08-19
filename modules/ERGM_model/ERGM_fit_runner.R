@@ -112,6 +112,108 @@ dedupe_edges <- function(edges_df, directed = FALSE) {
   edges_df
 }
 
+# Converts a fitted `ergm` object's coefficient table into a JSON-friendly
+# list, including standard errors and p-values (not just point estimates).
+extract_coef_table <- function(fit) {
+  s <- summary(fit)
+  coef_mat <- tryCatch(s$coefficients, error = function(e) NULL)
+
+  if (is.null(coef_mat)) {
+    # Fall back to plain coefficients if summary structure differs
+    return(lapply(names(coef(fit)), function(nm) {
+      list(term = nm, estimate = unname(coef(fit)[nm]))
+    }))
+  }
+
+  term_names <- rownames(coef_mat)
+  lapply(seq_along(term_names), function(i) {
+    row <- coef_mat[i, ]
+    list(
+      term = term_names[i],
+      estimate = unname(row[["Estimate"]]),
+      std_error = unname(row[["Std. Error"]]),
+      p_value = unname(row[[grep("Pr", names(row), value = TRUE)[1]]])
+    )
+  })
+}
+
+# Basic convergence / degeneracy check. A fit that "succeeded" numerically
+# can still be unreliable if the MLE didn't actually converge, or if
+# standard errors are NA/Inf (a classic sign of near-degeneracy).
+check_convergence <- function(fit) {
+  se <- tryCatch(summary(fit)$coefficients[, "Std. Error"], error = function(e) NA)
+  has_bad_se <- any(is.na(se)) || any(!is.finite(se))
+
+  failure_flag <- isTRUE(fit$failure)
+
+  list(
+    converged = !failure_flag && !has_bad_se,
+    failure_flag = failure_flag,
+    has_bad_std_errors = has_bad_se
+  )
+}
+
+# Runs ergm::gof() on the fitted model using the statnet-recommended
+# out-of-model statistics (degree/espartners/distance, split into
+# idegree/odegree for directed networks) plus `model` to directly test
+# the in-model terms, then converts the resulting tables into a
+# JSON-friendly nested list. See:
+# https://statnet.org/workshop-ergm/ergm_tutorial.html#6_Examining_the_quality_of_model_fit_%E2%80%94_GOF
+run_gof <- function(fit, directed, log_con, nsim = 100) {
+  gof_formula <- if (directed) {
+    ~ idegree + odegree + espartners + distance + model
+  } else {
+    ~ degree + espartners + distance + model
+  }
+
+  cat("Running GOF diagnostics...\n", file = log_con)
+
+  gof_obj <- tryCatch({
+    gof(
+      fit,
+      GOF = gof_formula,
+      control = control.gof.ergm(
+        nsim = nsim,
+        MCMC.burnin = 20000,
+        MCMC.interval = 1000
+      )
+    )
+  }, error = function(e) {
+    cat(sprintf("GOF computation failed: %s\n", conditionMessage(e)), file = log_con)
+    NULL
+  })
+
+  if (is.null(gof_obj)) {
+    return(NULL)
+  }
+
+  # gof() returns a list of matrices/data.frames, one per statistic
+  # (e.g. $degree, $espartners, $distance, $model). Convert each into a
+  # list of per-bin records: {stat, obs, min, mean, max, mc_p_value, ...}
+  out <- list()
+  for (nm in names(gof_obj)) {
+    val <- gof_obj[[nm]]
+    if (is.matrix(val) || is.data.frame(val)) {
+      df <- as.data.frame(val)
+      colnames(df) <- make.names(colnames(df), unique = TRUE)
+      rn <- rownames(df)
+
+      records <- lapply(seq_len(nrow(df)), function(i) {
+        rec <- as.list(df[i, , drop = TRUE])
+        rec$stat_level <- rn[i]
+        rec
+      })
+
+      if (length(records) > 0) {
+        out[[nm]] <- records
+      }
+    }
+  }
+
+  cat("GOF diagnostics complete.\n", file = log_con)
+  out
+}
+
 fit_and_simulate <- function(net, formulas, log_con) {
   last_error <- NULL
 
@@ -131,6 +233,14 @@ fit_and_simulate <- function(net, formulas, log_con) {
         )
       )
 
+      convergence <- check_convergence(fit)
+      if (!convergence$converged) {
+        stop(sprintf(
+          "Fit did not converge cleanly (failure_flag=%s, bad_std_errors=%s)",
+          convergence$failure_flag, convergence$has_bad_std_errors
+        ))
+      }
+
       simulated <- simulate(
         fit,
         nsim = 1,
@@ -140,7 +250,7 @@ fit_and_simulate <- function(net, formulas, log_con) {
         )
       )
 
-      list(fit = fit, simulated = simulated, label = label)
+      list(fit = fit, simulated = simulated, label = label, convergence = convergence)
     }, error = function(e) {
       cat(sprintf("Spec failed: %s -> %s\n", label, conditionMessage(e)), file = log_con)
       NULL
@@ -152,7 +262,7 @@ fit_and_simulate <- function(net, formulas, log_con) {
     }
   }
 
-  stop("All ERGM specifications failed or degenerated")
+  stop("All ERGM specifications failed, degenerated, or did not converge")
 }
 
 log_con <- stderr()
@@ -232,6 +342,9 @@ result <- tryCatch({
   fit <- fit_result$fit
   simulated <- fit_result$simulated
   chosen_spec <- fit_result$label
+  convergence <- fit_result$convergence
+
+  gof_results <- run_gof(fit, directed_flag, log_con, nsim = 100)
 
   el <- as.edgelist(simulated)
   vertex_names <- network.vertex.names(simulated)
@@ -251,6 +364,8 @@ result <- tryCatch({
     list(id = as.character(v))
   })
 
+  model_summary <- summary(fit)
+
   list(
     nodes = nodes_out,
     edges = edges_out,
@@ -265,7 +380,13 @@ result <- tryCatch({
       observed_n_edges = network.edgecount(net),
       generated_n_nodes = length(nodes_out),
       generated_n_edges = length(edges_out),
-      coefficients = as.list(coef(fit))
+      coefficients = as.list(coef(fit)),
+      coefficient_table = extract_coef_table(fit),
+      convergence = convergence,
+      aic = tryCatch(model_summary$aic, error = function(e) NA),
+      bic = tryCatch(model_summary$bic, error = function(e) NA),
+      null_deviance = tryCatch(model_summary$devtable["Model", "Deviance"], error = function(e) NA),
+      gof = gof_results
     )
   )
 }, error = function(e) {
@@ -274,4 +395,4 @@ result <- tryCatch({
 })
 
 sink(type = "message")
-cat(toJSON(result, auto_unbox = TRUE))
+cat(toJSON(result, auto_unbox = TRUE, na = "null"))

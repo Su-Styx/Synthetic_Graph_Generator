@@ -100,7 +100,7 @@ def generate_VGAE(params: dict) -> dict:
     return generate_VGAE_graph(
         edges_path=params["filepath"],          # user’s edges CSV on disk
         nodes_path=params["nodes_filepath"],    # user’s nodes CSV on disk
-        n=params.get("n"),                      # or None for full size
+        # n=params.get("n"),                      # or None for full size
         threshold=params["threshold"],
         model_name=params.get("model_name", "VGAE"),
         epochs=params.get("epochs", 200),

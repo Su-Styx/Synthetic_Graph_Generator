@@ -25,9 +25,11 @@ class Run(models.Model):
         choices=Status.choices,
         default=Status.PENDING,
     )
-    model=models.CharField(
+    model = models.CharField(
         max_length=20,
         choices=Models.choices,
+        null=True,
+        blank=True,
         default=None,
     )
     params=models.JSONField(default=dict,blank=True)

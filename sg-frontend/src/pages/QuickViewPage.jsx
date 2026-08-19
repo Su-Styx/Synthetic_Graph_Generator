@@ -5,8 +5,10 @@ import { buildGraphData, computeMetrics, extraKeys } from "../utils/graphMetrics
 import bgImage from "../assets/bcg.png";
 import "./css/RunDetailPage.css";
 
+
 const NODE_CORE_KEYS = new Set(["id", "x", "y", "vx", "vy", "index", "fx", "fy"]);
 const LINK_CORE_KEYS = new Set(["id", "source", "target", "index"]);
+import { authFetch } from "../api/authFetch";
 
 export default function QuickViewPage() {
   const [file, setFile] = useState(null);
@@ -19,7 +21,7 @@ export default function QuickViewPage() {
   const metrics = useMemo(() => computeMetrics(graphData), [graphData]);
   const nodeKeys = useMemo(() => extraKeys(graphData?.nodes, NODE_CORE_KEYS), [graphData]);
   const linkKeys = useMemo(() => extraKeys(graphData?.links, LINK_CORE_KEYS), [graphData]);
-
+  
   async function handleUpload(event) {
     event.preventDefault();
 
@@ -36,10 +38,21 @@ export default function QuickViewPage() {
       const formData = new FormData();
       formData.append("file", file, file.name);
 
-      const res = await fetch("http://localhost:8000/api/quick-view/", {
+      // const res = await fetch("http://localhost:8000/api/quick-view/", {
+      //   method: "POST",
+      //   body: formData,
+      // });
+      const token = localStorage.getItem("accessToken");
+      console.log("Uploading with token:", token ? "present" : "MISSING");
+
+      const res = await authFetch("http://localhost:8000/api/quick-view/", {
         method: "POST",
         body: formData,
       });
+      // const res = await authFetch("http://localhost:8000/api/quick-view/", {
+      //   method: "POST",
+      //   body: formData,
+      // });
 
       const contentType = res.headers.get("content-type") || "";
       const bodyText = await res.text();
@@ -52,7 +65,13 @@ export default function QuickViewPage() {
         throw new Error(`Server returned non-JSON response: ${bodyText.slice(0, 300)}`);
       }
 
-      setResult(JSON.parse(bodyText));
+      const data = JSON.parse(bodyText);
+
+      setResult({
+        nodes: data.nodes,
+        edges: data.edges,
+        metadata: data.metadata,
+      });
     } catch (err) {
       setError(err.message || "Failed to load graph");
     } finally {

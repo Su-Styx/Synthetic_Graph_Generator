@@ -72,7 +72,7 @@ export default function WorkloadQueryPage() {
         <>
           <MetricsSection title="Preliminary Fields" data={result.metrics.preliminary_fields} />
           <MetricsSection title="Completeness" data={result.metrics.completeness} />
-          <MetricsSection title="Structural Fidelity" data={result.metrics.structural_fidelity} />
+          <MetricsSection title="Structural Similarity" data={result.metrics.structural_fidelity} />
           <MetricsSection title="Quantitative Metrics" data={result.metrics.quantitative_metrics} />
 
           <section className="panel">

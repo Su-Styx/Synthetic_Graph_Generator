@@ -15,6 +15,7 @@ import QuickViewPage from "./pages/QuickViewPage";
 import InstructionsPage from "./pages/InstructionsPage";
 import ModelListPage from "./pages/ModelListPage";
 
+import ProtectedRoute from "./pages/ProtectedRoute";
 
 export default function App() {
   const navigate = useNavigate();
@@ -136,7 +137,7 @@ export default function App() {
           </NavLink>
 
           <NavLink
-            to="/settings"
+            to="/InstructionsPage"
             style={({ isActive }) => ({
               display: "flex",
               alignItems: "center",
@@ -150,7 +151,7 @@ export default function App() {
             })}
           >
             <span style={{ fontSize: "0.9rem" }}>⚙</span>
-            <span>Settings</span>
+            <span>How To</span>
           </NavLink>
         </>
       )}
@@ -175,6 +176,24 @@ export default function App() {
           </button>
         ) : (
           <>
+          <NavLink
+            to="/"
+            style={({ isActive }) => ({
+              zIndex:1000,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              padding: "0.35rem 0.8rem",
+              borderRadius: "999px",
+              textDecoration: "none",
+              color: "white",
+              background: isActive ? "rgba(255, 255, 255, 0.18)" : "transparent",
+              fontWeight: isActive ? 600 : 500,
+            })}
+          >
+            <span style={{ fontSize: "0.9rem" }}>+</span>
+            <span>Home</span>
+          </NavLink>
             <NavLink
               to="/login"
               style={({ isActive }) => ({
@@ -220,14 +239,14 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/create-run" element={<CreateRunPage />} />
+        <Route path="/create-run" element={<ProtectedRoute><CreateRunPage /></ProtectedRoute>} />
         <Route path="/runs" element={<RunsPage />} />
-        <Route path="/runs/:id" element={<RunDetailPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/runs/:id" element={<ProtectedRoute><RunDetailPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/workload-query" element={<WorkloadQueryPage />} />
-        <Route path="/quick-view" element={<QuickViewPage />} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/workload-query" element={<ProtectedRoute><WorkloadQueryPage /></ProtectedRoute>} />
+        <Route path="/quick-view" element={<ProtectedRoute><QuickViewPage /></ProtectedRoute>} />
         <Route path="/instructionsPage" element={<InstructionsPage/>} />
         <Route path="/models" element={<ModelListPage />} />
       </Routes>

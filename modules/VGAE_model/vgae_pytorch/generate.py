@@ -68,41 +68,6 @@ def load_model(checkpoint_path, edges_path=None, nodes_path=None):
 
     return model, features, checkpoint
 
-# def generate_graph(model, adj_norm, features, num_nodes_out, threshold=0.5):
-#     print('graph generating')
-#     """
-#     Encode the training graph, sample from latent space,
-#     then decode to produce a new adjacency matrix.
-#     """
-#     with torch.no_grad():
-#         # Encode using the real training data
-#         z = model.encode(features)   # z shape: (2708, hidden2_dim)
-
-#         # Sample a subset of num_nodes_out latent vectors
-#         indices = torch.randperm(z.size(0))[:num_nodes_out]
-#         z_sub   = z[indices]
-
-#         # Decode via inner product
-#         adj_pred = torch.sigmoid(torch.mm(z_sub, z_sub.t()))
-#         adj_bin  = (adj_pred > threshold).int()
-#         adj_bin.fill_diagonal_(0)
-
-#     edges     = adj_bin.nonzero(as_tuple=False).tolist()
-#     edges     = [{"source": s, "target": t} for s, t in edges if s < t]
-
-#     return {
-#         "nodes":    [{"id": i} for i in range(num_nodes_out)],
-#         "edges":    edges,
-#         "metadata": {
-#             "model":    "vgae",
-#             "n_nodes":  num_nodes_out,
-#             "n_edges":  len(edges),
-#             "directed": False,
-#             "parameters": {"threshold": threshold}
-#         }
-#     }
-
-# generate.py
 
 def generate_graph(model, adj_norm, features, num_nodes_out, threshold=0.5):
     print('graph generating')

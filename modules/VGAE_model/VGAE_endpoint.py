@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd  # NEW: used to read node attributes
+import pandas as pd 
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -71,6 +71,7 @@ def generate(
             ) from e
 
 
+# python3 --dataset disease_features --edges_path /home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/edges_200.csv --nodes_path  /home/styx/Dissertation/Synthetic_Graph_Generator/Data/Dataverse/nodes_200.csv --threshold 0.5 --model_name VGAE --epochs 2 --hidden1 32 --hidden2 16 --lr .01 --seed 42 
 def train_vgae(
     edges_path: str,
     nodes_path: Optional[str] = None,

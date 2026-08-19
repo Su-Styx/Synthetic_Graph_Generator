@@ -1,26 +1,5 @@
-
-# {"nodes": [ {id:0...etc}],"edges":[{"source":0,"target":1}...etc],
-# "metadata":{"model": "vgae", "n_nodes": 20, "n_edges": 98, "directed": false,"parameters": {"threshold": 0.5}}}
 import random
 from datetime import datetime, timezone
-
-def apply_schema(result: dict, schema: dict | None) -> dict:
-    if not schema:
-        return result
-
-    node_type = schema.get("node_type", "node")
-    edge_type = schema.get("edge_type", "connected_to")
-
-    for i, node in enumerate(result["nodes"]):
-        node["type"] = node_type
-        node["label"] = f"{node_type.capitalize()} {i + 1}"
-
-    for edge in result["edges"]:
-        edge["type"] = edge_type
-
-    return result
-
-
 
 
 def _sample_categorical(rule):
@@ -58,17 +37,24 @@ def _sample_attribute(rule):
         return _sample_timestamp(rule)
     return None
 
-
 def apply_schema(result: dict, schema: dict | None) -> dict:
     if not schema:
         return result
+
+    nodes = result.get("nodes")
+    edges = result.get("edges")
+
+    if not (isinstance(nodes, list) and all(isinstance(n, dict) for n in nodes)):
+        raise TypeError(f"Expected result['nodes'] to be a list of dicts, got: {nodes!r}")
+    if not (isinstance(edges, list) and all(isinstance(e, dict) for e in edges)):
+        raise TypeError(f"Expected result['edges'] to be a list of dicts, got: {edges!r}")
 
     node_type = schema.get("node_type", "node")
     edge_type = schema.get("edge_type", "connected_to")
     node_attribute_rules = schema.get("node_attributes", [])
     edge_attribute_rules = schema.get("edge_attributes", [])
 
-    for i, node in enumerate(result["nodes"]):
+    for i, node in enumerate(nodes):
         node["type"] = node_type
         node["label"] = f"{node_type.capitalize()} {i + 1}"
 
@@ -77,7 +63,7 @@ def apply_schema(result: dict, schema: dict | None) -> dict:
             if name:
                 node[name] = _sample_attribute(rule)
 
-    for edge in result["edges"]:
+    for edge in edges:
         edge["type"] = edge_type
 
         for rule in edge_attribute_rules:

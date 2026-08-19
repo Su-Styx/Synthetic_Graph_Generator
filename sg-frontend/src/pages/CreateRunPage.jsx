@@ -91,7 +91,7 @@ export default function CreateRunPage() {
           jobParams = {
             filepath: uploadedPath,
             nodes_filepath: uploadedNodesPath || undefined,
-            n: Number(n),
+            // n: Number(n),
             threshold: Number(threshold),
             epochs: Number(epochs),
             hidden1: Number(hidden1),
@@ -206,7 +206,7 @@ export default function CreateRunPage() {
                       />
                     </Field>
 
-                    <Field label="n" hint="Number of nodes to generate">
+                    {/* <Field label="n" hint="Number of nodes to generate">
                       <input
                         className="field-input"
                         type="number"
@@ -215,7 +215,7 @@ export default function CreateRunPage() {
                         min="2"
                         required
                       />
-                    </Field>
+                    </Field> */}
 
                     <Field label="threshold" hint="Edge threshold, between 0 and 1">
                       <input

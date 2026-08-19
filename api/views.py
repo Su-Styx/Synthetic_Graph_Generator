@@ -23,6 +23,7 @@ import io
 from scipy.io import mmread
 
 import networkx as nx
+from rest_framework.permissions import IsAuthenticated
 
 
 
@@ -58,6 +59,8 @@ from rest_framework.response import Response
 
 from .models import Run
 from .serializers import RunSerializer
+import logging
+logger = logging.getLogger(__name__)
 
 class RunViewSet(viewsets.ModelViewSet):
     queryset = Run.objects.all().order_by('-created_at')
@@ -273,6 +276,7 @@ class FileUploadView(APIView):
 
 class QuickViewUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         uploaded_file = request.FILES.get("file")
@@ -297,27 +301,128 @@ class QuickViewUploadView(APIView):
                     {"error": f"Unsupported file type: {suffix}"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        except Exception as e:
+        except Exception as exc:
+            logger.exception(f"Failed to parse graph: {exc}")
             return Response(
-                {"error": f"Failed to parse graph: {e}"},
+                {"error": f"Failed to parse graph: {exc}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # graph is now guaranteed to be defined here
+        graph_data = self._serialise_graph(graph, uploaded_file.name)
+        metrics = self._calculate_metrics(graph)
 
-        nodes = [{"id": str(n)} for n in graph.nodes()]
+        graph_data["metadata"]["metrics"] = metrics
+
+        try:
+            logger.info(f"Creating Run record: name=Uploaded: {uploaded_file.name}, user={request.user}")
+            run = Run.objects.create(
+                name=f"Uploaded: {uploaded_file.name}",
+                job_type="upload",
+                model=None,
+                status=Run.Status.COMPLETED,
+                params={
+                    "source": "upload",
+                    "filename": uploaded_file.name,
+                    "file_type": suffix,
+                    "directed": graph.is_directed(),
+                },
+                result=graph_data,
+                created_by=request.user,  # Now guaranteed to be authenticated
+                started_at=None,
+                finished_at=None,
+            )
+            logger.info(f"Run created successfully with id={run.id}")
+        except Exception as exc:
+            logger.exception(f"Failed to create Run: {exc}")
+            return Response(
+                {"error": f"Graph was parsed but could not be saved as a run: {exc}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(
+            {
+                "run_id": run.id,
+                "name": run.name,
+                "job_type": run.job_type,
+                "model": run.model,
+                "status": run.status,
+                "nodes": graph_data["nodes"],
+                "edges": graph_data["edges"],
+                "metadata": graph_data["metadata"],
+                "metrics": metrics,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def _serialise_graph(self, graph, filename):
+        nodes = [{"id": str(node)} for node in graph.nodes()]
+
         edges = [
             {
-                "source": str(u),
-                "target": str(v),
-                **({"weight": data.get("weight")} if "weight" in data else {}),
+                "source": str(source),
+                "target": str(target),
+                **(
+                    {"weight": data["weight"]}
+                    if "weight" in data
+                    else {}
+                ),
             }
-            for u, v, data in graph.edges(data=True)
+            for source, target, data in graph.edges(data=True)
         ]
 
-        return Response({"nodes": nodes, "edges": edges}, status=status.HTTP_200_OK)
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "metadata": {
+                "model": "upload",
+                "source_file": filename,
+                "n_nodes": graph.number_of_nodes(),
+                "n_edges": graph.number_of_edges(),
+                "directed": graph.is_directed(),
+            },
+        }
+
+    def _calculate_metrics(self, graph):
+        node_count = graph.number_of_nodes()
+        edge_count = graph.number_of_edges()
+
+        degrees = [degree for _, degree in graph.degree()]
+        average_degree = (
+            sum(degrees) / len(degrees)
+            if degrees
+            else 0
+        )
+        maximum_degree = max(degrees) if degrees else 0
+
+        density = nx.density(graph) if node_count > 1 else 0
+
+        try:
+            average_clustering = nx.average_clustering(graph.to_undirected())
+        except Exception:
+            average_clustering = 0
+
+        return {
+            "nodeCount": node_count,
+            "edgeCount": edge_count,
+            "avgDegree": round(average_degree, 4),
+            "maxDegree": maximum_degree,
+            "density": round(density, 6),
+            "avgClustering": round(average_clustering, 6),
+        }
 
     def _parse_edgelist(self, uploaded_file):
         text = uploaded_file.read().decode("utf-8")
-        lines = [ln for ln in text.splitlines() if ln.strip() and not ln.strip().startswith(("#", "%"))]
+
+        lines = [
+            line
+            for line in text.splitlines()
+            if line.strip()
+            and not line.strip().startswith(("#", "%"))
+        ]
+
+        if not lines:
+            raise ValueError("Edge-list file is empty")
+
         return nx.parse_edgelist(lines, nodetype=str)
 
     def _parse_csv(self, uploaded_file):
@@ -329,24 +434,38 @@ class QuickViewUploadView(APIView):
             raise ValueError("CSV file is empty")
 
         header = rows[0]
-        has_header = any(c.isalpha() for c in "".join(header))
+        has_header = any(
+            value.isalpha()
+            for value in "".join(header)
+        )
+
         edge_rows = rows[1:] if has_header else rows
 
         graph = nx.Graph()
+
         for row in edge_rows:
             if len(row) < 2:
                 continue
+
             source = str(row[0]).strip()
             target = str(row[1]).strip()
-            if source and target:
+
+            if source and target and source != target:
                 graph.add_edge(source, target)
+
+        if graph.number_of_edges() == 0:
+            raise ValueError("No usable edges found in CSV")
 
         return graph
 
     def _parse_mtx(self, uploaded_file):
         matrix = mmread(uploaded_file)
-        return nx.from_scipy_sparse_array(matrix)
+        graph = nx.from_scipy_sparse_array(matrix)
 
+        if graph.number_of_edges() == 0:
+            raise ValueError("Matrix contains no usable edges")
+
+        return graph
 
 def vgae_generate_view(request):
     """

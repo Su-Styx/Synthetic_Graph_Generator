@@ -49,3 +49,30 @@ def generate(n: int, m: int, seed: Optional[int] = None) -> dict:
 @app.post("/generate/barabasi-albert")
 async def barabasi_albert_endpoint(request: BARequest):
     return generate(n=request.n, m=request.m, seed=request.seed)
+
+
+
+
+
+if __name__ == "__main__":
+    import argparse
+    import json
+    import random
+
+    parser = argparse.ArgumentParser(description="Train and generate using VGAE.")
+    parser.add_argument("--n", type=int, required=True, help="number of nodes to generate")
+    parser.add_argument("--m", type=int, required=True, help="number of edges to attach from each new node")
+    parser.add_argument("--seed", type=int, default=None, help="seed value")
+
+    args = parser.parse_args()
+
+    # Convert seed to a Random instance for NetworkX compatibility
+    seed = random.Random(args.seed) if args.seed is not None else None
+
+    result = generate(
+        n=args.n,
+        m=args.m,
+        seed=seed,
+    )
+
+    print(json.dumps(result, indent=4))

@@ -141,14 +141,14 @@ export default function HomePage() {
     <Link to={dashTarget} style={{color: "white", textDecoration: "none"}}>
       {dashLabel} 
     </Link>
-    <Link to="/about" style={{color: "white", textDecoration: "none"}}>
-      About
+    <Link to="/instructionspage" style={{color: "white", textDecoration: "none"}}>
+      How To
     </Link>
     <Link to="/models" style={{color: "white", textDecoration: "none"}}>
       Models
     </Link>
-    <Link to="/products" style={{color: "white", textDecoration: "none"}}>
-      Products
+    <Link to="/quick-view" style={{color: "white", textDecoration: "none"}}>
+      QuickView
     </Link>
     {/* {isLoggedIn ? (
           <Link to="/dashboard" style={{color: "white", textDecoration: "none"}}>
