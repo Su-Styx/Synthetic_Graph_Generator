@@ -396,3 +396,8 @@ result <- tryCatch({
 
 sink(type = "message")
 cat(toJSON(result, auto_unbox = TRUE, na = "null"))
+sink(type = "message")
+
+output_path <- if (length(args) >= 4) args[4] else paste0(file_path, ".result.json")
+write(toJSON(result, auto_unbox = TRUE, na = "null"), file = output_path)
+cat(output_path)  # still print the path to stdout so Python knows where to look

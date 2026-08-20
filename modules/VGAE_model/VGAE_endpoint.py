@@ -106,8 +106,13 @@ def train_vgae(
 
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
 
+    # if result.returncode != 0:
+    #     raise RuntimeError(f"VGAE training failed: {result.stderr.strip()}")
+
     if result.returncode != 0:
-        raise RuntimeError(f"VGAE training failed: {result.stderr.strip()}")
+        # Combine stdout and stderr for debugging
+        output = (result.stdout + "\n" + result.stderr).strip()
+        raise RuntimeError(f"ERGM fit/generate failed:\n{output}")
 
     # Training finished successfully; result.stdout just contains logs, not JSON.
     stdout_head = result.stdout[:500]
@@ -134,8 +139,9 @@ def train_vgae(
 
 def train_and_generate(
     edges_path: str,
-    n: Optional[int],          # requested number of nodes; if None, use full dataset size
+             
     threshold: float,
+    n: Optional[int]=None,  # requested number of nodes; if None, use full dataset size
     nodes_path: Optional[str] = None,
     model_name: str = "VGAE",
     epochs: int = 200,

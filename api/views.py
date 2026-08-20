@@ -263,10 +263,12 @@ class FileUploadView(APIView):
         with saved_path.open("wb+") as destination:
             for chunk in uploaded_file.chunks():
                 destination.write(chunk)
-
+        relative_path = str(saved_path.relative_to(settings.MEDIA_ROOT)) #abs path
         return Response(
             {
-                "filepath": str(saved_path),
+                # original hardcoded path:
+                # "filepath": str(saved_path),
+                "filepath": relative_path, 
                 "filename": uploaded_file.name,
             },
             status=status.HTTP_201_CREATED,

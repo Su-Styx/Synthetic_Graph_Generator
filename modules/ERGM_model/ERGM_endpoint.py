@@ -34,7 +34,7 @@ class ERGMRequest(BaseModel):
 
 FIT_R_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "ERGM_fit_runner.R")
 
-FIT_R_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "ERGM_fit_runner.R")
+# FIT_R_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "ERGM_fit_runner.R")
 
 
 
