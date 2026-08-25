@@ -1,4 +1,3 @@
-// src/pages/ModelListPage.jsx
 import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { authFetch } from "../api/authFetch";

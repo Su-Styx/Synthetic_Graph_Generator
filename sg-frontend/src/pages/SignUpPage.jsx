@@ -1,4 +1,3 @@
-// src/pages/SignUpPage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import bgImage from "../assets/bcg.png";

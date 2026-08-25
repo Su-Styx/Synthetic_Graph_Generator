@@ -1,4 +1,4 @@
-# Model generation calls live here 
+# Model generation calls live here, some renamed 
 from modules.BA_model.BA_endpoint import generate as generate_BA_graph
 from modules.ER_model.ER_endpoint import generate_er_graph 
 from modules.ERGM_model.ERGM_endpoint import fit_and_generate_from_file as generate_ERGM_graph
@@ -7,46 +7,17 @@ from typing import Optional
 import json
 import subprocess
 from pathlib import Path
-R_SCRIPT_PATH = Path("/home/styx/Dissertation/Synthetic_Graph_Generator/modules/ERGM_model/ERGM_fit_runner.R")
+from django.conf import settings
+
+
+# NOTE: for dockerdeployment, remove line below and make relative to root dir
+# R_SCRIPT_PATH = Path("/home/styx/Dissertation/Synthetic_Graph_Generator/modules/ERGM_model/ERGM_fit_runner.R")
 
 
 # wrap the return statement of each generation in attribute_gen
 
 
-# def attribute_gen(labels:dict,graph:dict) ->dict:
-
-#     n_l=labels["node_label"]
-#     n_i=labels["node_ID"]
-#     e_r=labels["edge_relationship"]
-#     # optional section
-#     n_a=labels["node_attribute"]
-#     e_w=labels["edge_weight"]
-
-
-#     n=graph["nodes"]
-#     nodes=n[0]
-#     edges=n[1]
-
-#     for i in nodes:
-        
-#         # apply labelling for each of the nodes in the graph dict
-#         pass
-#     for j in edges:
-#         # apply the edge labels 
-#         pass
-
-
-
-
-
 def generate_er(params: dict) -> dict:
-    # nested generation function into attribute_gen to apply labels upon the returned dictionary
-    # return attribute_gen(labels,generate_er_graph(
-    #     n=params["n"],
-    #     p=params["p"],
-    #     directed=params.get("directed", False),
-    #     seed=params.get("seed"),
-    # ))
 
     return generate_er_graph(
         n=params["n"],
@@ -67,8 +38,7 @@ def generate_ba (params: dict) -> dict:
 
 
 
-from pathlib import Path
-from django.conf import settings
+
 
 def generate_ERGM_graph(file_path: str, seed: Optional[int] = None) -> dict:
     abs_path = Path(settings.MEDIA_ROOT) / file_path
@@ -83,10 +53,11 @@ def generate_ERGM_graph(file_path: str, seed: Optional[int] = None) -> dict:
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=7200)
 
-    # Always log what happened, regardless of outcome
+    # logging everything that happens, volatile in docker container 
+    # show early and last few parts to get where it wernt wrong
     print(f"ERGM subprocess returncode={result.returncode}")
     print(f"ERGM stdout: {result.stdout[:1000]}")
-    print(f"ERGM stderr: {result.stderr[-2000:]}")  # tail is more useful for R logs
+    print(f"ERGM stderr: {result.stderr[-2000:]}")  
 
     if not output_path.exists():
         raise RuntimeError(
@@ -99,27 +70,6 @@ def generate_ERGM_graph(file_path: str, seed: Optional[int] = None) -> dict:
             return json.load(f)
     finally:
         output_path.unlink(missing_ok=True)  # cleanup
-# def generate_ERGM_graph(file_path: str, seed: int | None = None) -> dict:
-#     seed_arg = str(seed) if seed is not None else "NA"
-    
-
-#     result = subprocess.run(
-#         ["Rscript", str(R_SCRIPT_PATH), file_path, seed_arg],
-#         stdout=subprocess.PIPE,
-#         stderr=subprocess.PIPE,
-#         text=True,
-#         timeout=7200  # temp 2 hr testing,
-#     )
-
-#     if result.returncode != 0:
-#         raise RuntimeError(f"ERGM fit/generate failed: {result.stderr.strip()}")
-
-#     try:
-#         return json.loads(result.stdout)
-#     except json.JSONDecodeError as e:
-#         raise RuntimeError(
-#             f"ERGM returned invalid JSON. stdout head: {result.stdout[:500]!r}, stderr head: {result.stderr[:500]!r}"
-#         ) from e
 
 # directly call this one
 def generate_ERGM(params: dict) -> dict:
@@ -127,15 +77,25 @@ def generate_ERGM(params: dict) -> dict:
     seed = params.get("seed")
     return generate_ERGM_graph(file_path, seed)
 
-# generators.py
 
-# from .VGAE_endpoint import generate_VGAE_graph  # adjust import path as needed
+
 
 def generate_VGAE(params: dict) -> dict:
+    # added some defaults for prompting directly from cli 
+
+    edges_path = Path(settings.MEDIA_ROOT) / params["filepath"]
+    nodes_path = Path(settings.MEDIA_ROOT) / params["nodes_filepath"]
+
+    if not edges_path.exists():
+        raise FileNotFoundError(f"VGAE edges file not found: {edges_path}")
+    if not nodes_path.exists():
+        raise FileNotFoundError(f"VGAE nodes file not found: {nodes_path}")
     return generate_VGAE_graph(
-        edges_path=params["filepath"],          # user’s edges CSV on disk
-        nodes_path=params["nodes_filepath"],    # user’s nodes CSV on disk
-        n=params.get("n"),                      # or None for full size
+        edges_path=str(edges_path),
+        nodes_path=str(nodes_path),
+        # edges_path=params["filepath"],          
+        # nodes_path=params["nodes_filepath"],    
+        n=params.get("n"),                     
         threshold=params["threshold"],
         model_name=params.get("model_name", "VGAE"),
         epochs=params.get("epochs", 200),

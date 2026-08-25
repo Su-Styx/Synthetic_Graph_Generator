@@ -4,7 +4,7 @@ from .models import Run
 from .services.generators import generate_er, generate_ba, generate_ERGM, generate_VGAE
 from .services.attributes import apply_schema
 
-
+# note this needs to be updated for each model added
 JOB_DISPATCH = {
     "er": generate_er,
     "ba": generate_ba,
@@ -12,16 +12,17 @@ JOB_DISPATCH = {
     "vgae": generate_VGAE
 }
 
+# celery worker will execute the defined function 
 @shared_task
 def execute_run(run_id):
     run = Run.objects.get(id=run_id)
-
+    # status, time and error messages are automatically updated in sequential exection 
     try:
         run.status = "running"
         run.started_at = timezone.now()
         run.error_message = ""
         run.save(update_fields=["status", "started_at", "error_message", "updated_at"])
-
+        # normaliseed job_type for easy matching
         job_type = run.job_type.lower().strip()
 
         if job_type not in JOB_DISPATCH:
@@ -30,7 +31,7 @@ def execute_run(run_id):
         generator_fn = JOB_DISPATCH[job_type]
         result = generator_fn(run.params)
 
-        result = apply_schema(result, run.params.get("schema"))   #apply schema goes here
+        result = apply_schema(result, run.params.get("schema"))   #schema is applied to the results here
 
         run.result = result
         run.status = "completed"

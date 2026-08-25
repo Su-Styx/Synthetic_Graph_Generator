@@ -1,4 +1,3 @@
-// src/components/ui/Modal.jsx
 export function Modal({ title, onClose, children }) {
   return (
     <div className="modal-overlay" onClick={onClose}>

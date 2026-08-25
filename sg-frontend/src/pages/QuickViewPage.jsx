@@ -1,4 +1,3 @@
-// src/pages/QuickViewPage.jsx
 import { useMemo, useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";
 import { buildGraphData, computeMetrics, extraKeys } from "../utils/graphMetrics";

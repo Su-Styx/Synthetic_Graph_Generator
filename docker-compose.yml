@@ -1,4 +1,5 @@
-# docker-compose.yml
+# note this docker container can be run with the sudo docker compose up --build 
+  # (in the root folder) 
 services:
   redis:
     image: redis:7-alpine

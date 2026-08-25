@@ -1,4 +1,3 @@
-// src/components/ui/Field.jsx
 export function Field({ label, hint, children }) {
   return (
     <label className="field-group">

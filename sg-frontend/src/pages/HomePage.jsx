@@ -1,4 +1,3 @@
-// src/pages/HomePage.jsx
 import { Link } from "react-router-dom";
 import bgImage from "../assets/bcg.png";
 const arrowSize = "2.5rem";

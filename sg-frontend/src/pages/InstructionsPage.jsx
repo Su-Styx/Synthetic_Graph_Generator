@@ -1,4 +1,3 @@
-// src/pages/UsageInstructionsPage.jsx
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Panel } from "./ui/Panel-Light";

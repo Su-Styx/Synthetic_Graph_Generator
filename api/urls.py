@@ -10,7 +10,6 @@ router = DefaultRouter()
 router.register(r'runs', RunViewSet, basename='run')
 
 urlpatterns = [
-    path('health/', health, name='health'),
     path('', include(router.urls)),
     path("signup/", SignupView.as_view(), name="signup"),
     path("workload-query/", WorkloadQueryView.as_view(), name="workload-query"),

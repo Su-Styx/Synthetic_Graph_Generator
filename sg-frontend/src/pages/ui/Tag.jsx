@@ -1,4 +1,3 @@
-// src/components/ui/Tag.jsx
 export function Tag({ children }) {
   return <span className="tag">{children}</span>;
 }

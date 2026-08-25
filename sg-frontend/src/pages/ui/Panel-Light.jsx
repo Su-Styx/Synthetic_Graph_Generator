@@ -1,4 +1,3 @@
-// src/components/ui/Panel.jsx
 export function Panel({ title, accent, action, children }) {
   return (
     <section className={`panel ${accent ? "accent" : ""}`}style={{backgroundColor: "rgba(239, 248, 250, 0.22)"}}>

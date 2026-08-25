@@ -1,66 +1,44 @@
-# from django.shortcuts import render
-
-# Create your views here.
-from api.serializers import RunSerializer, GenModelSerializer
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import viewsets
-from django.db import transaction
-from .tasks import execute_run
-from rest_framework.views import APIView 
-from rest_framework import status
-from .models import Run, GenModel
-from .services.metrics import compute_all_metrics
-from .services.query_engine import run_generic_queries, run_custom_query
-
-from pathlib import Path
-import uuid
-from django.conf import settings
-from rest_framework.parsers import MultiPartParser, FormParser
-import csv 
-import os
+import csv
 import io
-from scipy.io import mmread
+import logging
+import os
+import shutil
+import tempfile
+import uuid
+from pathlib import Path
 
 import networkx as nx
+from scipy.io import mmread
+
+from django.conf import settings
+from django.db import transaction
+from django.db.models import Case, IntegerField, Q, Value, When
+from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
+
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.decorators import api_view
+from rest_framework.generics import ListAPIView
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from api.serializers import GenModelSerializer, RunSerializer
+from .models import GenModel, Run
+from .serializers import RunSerializer, UserSignupSerializer
+from .services.metrics import compute_all_metrics
+from .services.query_engine import run_custom_query, run_generic_queries
+from .tasks import execute_run
 
+logger = logging.getLogger(__name__)
 
-from .serializers import RunSerializer
-# from .tasks import run_dummy_job
 
 @api_view(['GET'])
 def health(request):
     return Response({"status": "ok"})
 
-
-# recieve the http request and return the response
-
-# class RunViewSet(viewsets.ModelViewSet):
-#     queryset = Run.objects.all().order_by('-created_at')
-#     serializer_class = RunSerializer
-
-
-
-#  for RunViewSet, it allows for 
-# GET /api/runs/ - list all runs
-# POST /api/runs/ - create a new run
-# get /api/runs/{id}/ - retrieve a specific run
-
-# queryset tells DRF what object to work with 
-#  serializer_class tells DRF how to parse request data and return response
-# perform_create customizes what happens after a valid post create request
-from rest_framework import generics, permissions
-from .serializers import UserSignupSerializer
-
-from rest_framework import viewsets
-from rest_framework.response import Response
-
-from .models import Run
-from .serializers import RunSerializer
-import logging
-logger = logging.getLogger(__name__)
+# NOTE that each class 
 
 class RunViewSet(viewsets.ModelViewSet):
     queryset = Run.objects.all().order_by('-created_at')
@@ -76,9 +54,7 @@ class RunViewSet(viewsets.ModelViewSet):
         return Run.objects.filter(created_by=user)
 
     def list(self, request, *args, **kwargs):
-        """
-        GET /runs/ -> return all fields except `result` (used by dashboard)
-        """
+
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         data = serializer.data
@@ -87,6 +63,7 @@ class RunViewSet(viewsets.ModelViewSet):
         return Response(data)
 
     def retrieve(self, request, *args, **kwargs):
+
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         data = serializer.data
@@ -99,7 +76,7 @@ class RunViewSet(viewsets.ModelViewSet):
             print("DEBUG retrieve run", instance.id, "n_nodes", n_nodes)
 
             if n_nodes > 1500:
-                # Build a tiny stub result for large graphs
+                # large graphs will only return a stripped metadata set instead of the whole graph
                 stripped_meta = {
                     "model": meta.get("model"),
                     "n_nodes": n_nodes,
@@ -109,60 +86,13 @@ class RunViewSet(viewsets.ModelViewSet):
                 }
 
                 data["result"] = {
-                    "nodes": [],     # or omit entirely if you prefer
+                    "nodes": [],     # or omit entirely
                     "edges": [],
                     "metadata": stripped_meta,
                 }
 
         return Response(data)
 
-    # def retrieve(self, request, *args, **kwargs):
-       
-    #     """
-    #     GET /runs/<id>/ -> full run, but for large graphs strip node attributes
-    #     in the `result` payload.
-    #     """
-    #     instance = self.get_object()
-    #     serializer = self.get_serializer(instance)
-    #     data = serializer.data
-        
-
-    #     result = data.get("result")
-    #     if result and isinstance(result, dict):
-    #         meta = result.get("metadata") or {}
-    #         n_nodes = meta.get("n_nodes")
-    #         print("DEBUG retrieve run", instance.id, "n_nodes", n_nodes)
-    #         if n_nodes is None:
-    #             n_nodes = len(result.get("nodes", []))
-
-    #         if n_nodes and n_nodes > 1500:
-    #             stripped_nodes = [
-    #                 {"id": node.get("id")}
-    #                 for node in result.get("nodes", [])
-    #             ]
-    #             stripped_edges = [
-    #                 {
-    #                     "source": edge.get("source"),
-    #                     "target": edge.get("target"),
-    #                 }
-    #                 for edge in result.get("edges", [])
-    #             ]
-
-    #             stripped_meta = {
-    #                 "model": meta.get("model"),
-    #                 "n_nodes": n_nodes,
-    #                 "n_edges": meta.get("n_edges", len(result.get("edges", []))),
-    #                 "directed": meta.get("directed"),
-    #                 "parameters": meta.get("parameters"),
-    #             }
-
-    #             data["result"] = {
-    #                 "nodes": stripped_nodes,
-    #                 "edges": stripped_edges,
-    #                 "metadata": stripped_meta,
-    #             }
-            
-    #     return Response(data)
 class SignupView(generics.CreateAPIView):
     serializer_class = UserSignupSerializer
     permission_classes = [permissions.AllowAny]
@@ -174,7 +104,6 @@ def _sample_graph(result: dict, max_nodes: int = 1500) -> dict:
     if len(nodes) <= max_nodes:
         return result
 
-    # Simple sampling: take first max_nodes by id
     sampled_ids = {node["id"] for node in nodes[:max_nodes]}
     sampled_nodes = [node for node in nodes if node["id"] in sampled_ids]
     sampled_edges = [
@@ -266,8 +195,6 @@ class FileUploadView(APIView):
         relative_path = str(saved_path.relative_to(settings.MEDIA_ROOT)) #abs path
         return Response(
             {
-                # original hardcoded path:
-                # "filepath": str(saved_path),
                 "filepath": relative_path, 
                 "filename": uploaded_file.name,
             },
@@ -309,7 +236,6 @@ class QuickViewUploadView(APIView):
                 {"error": f"Failed to parse graph: {exc}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        # graph is now guaranteed to be defined here
         graph_data = self._serialise_graph(graph, uploaded_file.name)
         metrics = self._calculate_metrics(graph)
 
@@ -329,7 +255,7 @@ class QuickViewUploadView(APIView):
                     "directed": graph.is_directed(),
                 },
                 result=graph_data,
-                created_by=request.user,  # Now guaranteed to be authenticated
+                created_by=request.user,  # now guaranteed to be authenticated
                 started_at=None,
                 finished_at=None,
             )
@@ -480,7 +406,6 @@ def vgae_generate_view(request):
     edges_file = request.FILES["edges_file"]
     nodes_file = request.FILES["nodes_file"]
 
-    # Save uploads to disk (e.g. under MEDIA_ROOT)
     edges_path = default_storage.save(
         os.path.join("uploads", edges_file.name),
         ContentFile(edges_file.read()),
@@ -490,11 +415,11 @@ def vgae_generate_view(request):
         ContentFile(nodes_file.read()),
     )
 
-    # Build absolute paths if your endpoint expects them
+    # build abs paths 
     edges_abs = default_storage.path(edges_path)
     nodes_abs = default_storage.path(nodes_path)
 
-    # Parse numeric parameters with defaults
+    # parse numeric parameters with defaults
     threshold = float(request.POST.get("threshold", 0.5))
     epochs    = int(request.POST.get("epochs", 200))
     hidden1   = int(request.POST.get("hidden1", 32))
@@ -522,10 +447,6 @@ def vgae_generate_view(request):
 
     return JsonResponse(result, safe=False)
 
-from django.http import FileResponse, Http404
-from django.shortcuts import get_object_or_404
-import tempfile
-import shutil
 
 from export_layer.schema_func import (
     json_export,
@@ -579,8 +500,7 @@ def download_run_graph(request, pk: int):
 
 
 
-from django.db.models import Q, Case, When, Value, IntegerField
-from rest_framework.generics import ListAPIView
+
 
 
 

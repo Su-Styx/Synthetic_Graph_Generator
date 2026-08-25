@@ -1,4 +1,3 @@
-// src/components/ui/Toggle.jsx
 export function Toggle({ checked, onChange, on = "On", off = "Off" }) {
   return (
     <button type="button" className="toggle" onClick={onChange}>

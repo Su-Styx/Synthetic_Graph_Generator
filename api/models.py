@@ -1,8 +1,11 @@
-# from cairo import Status
 from django.db import models
 from django.conf import settings
 import uuid
 
+
+
+# the run class is the primary class used to contain any model-generated content 
+# each run object belongs to a user and contains integral fields such as job_type, a (non unique) name, parameters used for gen. etc...
 class Run(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -11,8 +14,6 @@ class Run(models.Model):
         FAILED = "failed", "Failed"
 
     class Models(models.TextChoices):
-        # ER = "erdos_renyi", "Erdos-Renyi","er","ER"
-        # BA = "barabasi_albert", "Barabasi-Albert","ba","BA"
         ER = "erdos_renyi", "Erdos-Renyi",
         BA = "barabasi_albert", "Barabasi-Albert",
         ERGM ="ergm","ERGM",
@@ -44,14 +45,18 @@ class Run(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="runs",
-        null=True,  # allow existing rows to have no user
-        blank=True,  # optional in forms
+        null=True,  # rows added before model change can exist w/o user
+        blank=True,  
     )
 
     def __str__(self):
         return f"{self.name} ({self.status})"
 
 
+
+# Defining the generative models that will be added to the list
+# based on key-details when going through the thought process of which model to pick 
+# will be sorted on front-end by efficiency and/or type? 
 class GenModel(models.Model):
     EFFICIENCY_CHOICES = [
         ("poor", "Poor"),
@@ -75,4 +80,3 @@ class GenModel(models.Model):
 
     def __str__(self):
         return f"{self.type} ({self.get_efficiency_display()})"
-# Create your models here.

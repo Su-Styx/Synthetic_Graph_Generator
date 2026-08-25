@@ -1,4 +1,3 @@
-// src/pages/ProtectedRoute.jsx
 import { Navigate, useLocation } from "react-router-dom";
 
 export default function ProtectedRoute({ children }) {
