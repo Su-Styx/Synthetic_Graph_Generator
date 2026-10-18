@@ -1,0 +1,22 @@
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Django media and generated results
+media/
+modules/ERGM_model/ergm_run_result.json
+modules/ERGM_model/gof_results.json
+modules/ER_model/*_runs_per_size*.csv
+modules/ER_model/cat.txt
+modules/ER_model/degree_distribution_summary.csv
+modules/ER_model/params_output.txt
+modules/VGAE_model/cat.txt
+modules/VGAE_model/media/
+modules/VGAE_model/*.pt
+modules/VGAE_model/vgae_pytorch/cat*.txt
+modules/VGAE_model/vgae_pytorch/*.pt
+
+# SQLite databases
+*.sqlite3
+db.sqlite3
